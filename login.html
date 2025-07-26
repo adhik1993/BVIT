@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BVIT Attendance System - Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-dark: #4338CA;
+            --primary-light: rgba(79, 70, 229, 0.1);
+            --secondary: #10B981;
+            --accent: #F59E0B;
+            --danger: #EF4444;
+            --text-dark: #1F2937;
+            --text-light: #6B7280;
+            --bg-light: #F3F4F6;
+            --white: #FFFFFF;
+            --border: #E5E7EB;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: url('https://images.unsplash.com/photo-1607237138185-eedd9c632b0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=2074&q=80') center/cover no-repeat;
+            background-attachment: fixed;
+            padding: 20px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .login-header {
+            padding: 30px;
+            text-align: center;
+            background: white;
+        }
+
+        .login-header img {
+            width: 180px;
+            height: auto;
+            margin-bottom: 30px;
+            object-fit: contain;
+        }
+
+        .login-header h1 {
+            font-size: 26px;
+            color: #1F2937;
+            margin-bottom: 8px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .login-header p {
+            color: #6B7280;
+            font-size: 14px;
+            font-weight: 400;
+        }
+
+        .login-tabs {
+            display: flex;
+            background: #F3F4F6;
+            padding: 4px;
+            margin: 0 30px;
+            border-radius: 12px;
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            color: #6B7280;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .tab i {
+            font-size: 16px;
+        }
+
+        .tab.active {
+            color: white;
+            background: #4F46E5;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        
+        .tab:hover:not(.active) {
+            background: rgba(79, 70, 229, 0.1);
+            color: #4F46E5;
+        }
+
+        .tab-slider {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            bottom: 4px;
+            width: calc(25% - 4px);
+            background: #4F46E5;
+            border-radius: 8px;
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+            z-index: 0;
+        }
+
+        .tab-slider.teacher {
+            transform: translateX(100%);
+        }
+
+        .tab-slider.student {
+            transform: translateX(200%);
+        }
+
+        .tab-slider.clerk {
+            transform: translateX(300%);
+        }
+
+        .login-form {
+            padding: 0 30px 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-dark);
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 12px 12px 40px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            background: var(--bg-light);
+            color: var(--text-dark);
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: var(--white);
+            box-shadow: 0 0 0 4px var(--primary-light);
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+            font-size: 16px;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus + i {
+            color: var(--primary);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-login:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .btn-login i {
+            font-size: 18px;
+        }
+
+        .error-message {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            font-size: 14px;
+            display: none;
+        }
+
+        /* Mobile Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            
+            .login-container {
+                max-width: 100%;
+                border-radius: 16px;
+            }
+
+            .login-header {
+                padding: 25px 20px 20px;
+            }
+
+            .login-header img {
+                width: 140px;
+            }
+            
+            .login-header h1 {
+                font-size: 22px;
+            }
+            
+            .login-header p {
+                font-size: 13px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
+            .login-container {
+                border-radius: 12px;
+            }
+
+            .login-header {
+                padding: 20px 15px 15px;
+            }
+
+            .login-header img {
+                width: 120px;
+                margin-bottom: 15px;
+            }
+            
+            .login-header h1 {
+                font-size: 20px;
+                letter-spacing: 0.5px;
+            }
+            
+            .login-header p {
+                font-size: 12px;
+            }
+
+            .login-tabs {
+                margin: 0 15px;
+                margin-bottom: 20px;
+                padding: 3px;
+            }
+
+            .tab {
+                padding: 10px 8px;
+                font-size: 12px;
+                gap: 6px;
+            }
+
+            .tab i {
+                font-size: 13px;
+            }
+            
+            .tab-slider {
+                top: 3px;
+                left: 3px;
+                bottom: 3px;
+                width: calc(25% - 3px);
+            }
+
+            .login-form {
+                padding: 0 15px 20px;
+            }
+            
+            .form-group {
+                margin-bottom: 15px;
+            }
+            
+            .form-group label {
+                font-size: 13px;
+                margin-bottom: 6px;
+            }
+
+            .input-group input {
+                padding: 12px 12px 12px 40px;
+                font-size: 14px;
+                border-radius: 8px;
+            }
+
+            .input-group i {
+                left: 14px;
+                font-size: 14px;
+            }
+
+            .btn-login {
+                padding: 14px;
+                font-size: 14px;
+                border-radius: 8px;
+            }
+
+            .btn-login i {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <img src="https://i.postimg.cc/7YtqgV7g/Adobe-Express-20231230-0106150-009053291427646104.png" alt="BVIT Logo">
+            <h1>WELCOME TO BVIT</h1>
+            <p>Login to access the attendance system</p>
+        </div>
+
+        <div class="login-tabs">
+            <div class="tab active" onclick="switchTab('admin')">
+                <i class="fas fa-user-shield"></i>
+                Admin
+            </div>
+            <div class="tab" onclick="switchTab('teacher')">
+                <i class="fas fa-chalkboard-teacher"></i>
+                Teacher
+            </div>
+            <div class="tab" onclick="switchTab('student')">
+                <i class="fas fa-user-graduate"></i>
+                Student
+            </div>
+            <div class="tab" onclick="switchTab('clerk')">
+                <i class="fas fa-user-tie"></i>
+                Clerk
+            </div>
+            <div class="tab-slider"></div>
+        </div>
+
+        <!-- Admin Login Form -->
+        <form id="adminForm" class="login-form">
+            <div class="form-group">
+                <label for="adminEmail">Email Address</label>
+                <div class="input-group">
+                    <input type="email" id="adminEmail" placeholder="Enter your email" required>
+                    <i class="fas fa-envelope"></i>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="adminPassword">Password</label>
+                <div class="input-group">
+                    <input type="password" id="adminPassword" placeholder="Enter your password" required>
+                    <i class="fas fa-lock"></i>
+                </div>
+            </div>
+            <button type="submit" class="btn-login">
+                <i class="fas fa-sign-in-alt"></i>
+                Login as Admin
+            </button>
+            <div id="adminError" class="error-message"></div>
+        </form>
+
+        <!-- Teacher Login Form -->
+        <form id="teacherForm" class="login-form" style="display: none;">
+            <div class="form-group">
+                <label for="teacherId">Teacher ID</label>
+                <div class="input-group">
+                    <input type="text" id="teacherId" placeholder="Enter your Teacher ID (e.g., CT001)" required>
+                    <i class="fas fa-id-card"></i>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="teacherPassword">Password</label>
+                <div class="input-group">
+                    <input type="password" id="teacherPassword" placeholder="Enter your password" required>
+                    <i class="fas fa-lock"></i>
+                </div>
+            </div>
+            <button type="submit" class="btn-login">
+                <i class="fas fa-sign-in-alt"></i>
+                Login as Teacher
+            </button>
+            <div id="teacherError" class="error-message"></div>
+        </form>
+
+        <!-- Student Login Form -->
+        <form id="studentForm" class="login-form" style="display: none;">
+            <div class="form-group">
+                <label for="studentRollNo">Roll Number</label>
+                <div class="input-group">
+                    <input type="text" id="studentRollNo" placeholder="Enter your roll number" required>
+                    <i class="fas fa-id-card"></i>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="studentPassword">Password</label>
+                <div class="input-group">
+                    <input type="password" id="studentPassword" placeholder="Enter your password" required>
+                    <i class="fas fa-lock"></i>
+                </div>
+            </div>
+            <button type="submit" class="btn-login">
+                <i class="fas fa-sign-in-alt"></i>
+                Login as Student
+            </button>
+            <div id="studentError" class="error-message"></div>
+        </form>
+
+        <!-- Clerk Login Form -->
+        <form id="clerkForm" class="login-form" style="display: none;">
+            <div class="form-group">
+                <label for="clerkId">Clerk ID</label>
+                <div class="input-group">
+                    <input type="text" id="clerkId" placeholder="Enter your clerk ID" required>
+                    <i class="fas fa-user-tie"></i>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="clerkPassword">Password</label>
+                <div class="input-group">
+                    <input type="password" id="clerkPassword" placeholder="Enter your password" required>
+                    <i class="fas fa-lock"></i>
+                </div>
+            </div>
+            <button type="submit" class="btn-login">
+                <i class="fas fa-sign-in-alt"></i>
+                Login as Clerk
+            </button>
+            <div id="clerkError" class="error-message"></div>
+        </form>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="firebase-config.js"></script>
+    <script>
+        // Switch between admin, teacher and student tabs
+        function switchTab(tab) {
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Add active class to clicked tab
+            const clickedTab = document.querySelector(`.tab:nth-child(${
+                tab === 'admin' ? 1 : tab === 'teacher' ? 2 : tab === 'student' ? 3 : 4
+            })`);
+            if (clickedTab) {
+                clickedTab.classList.add('active');
+            }
+
+            // Update slider position
+            const slider = document.querySelector('.tab-slider');
+            if (slider) {
+                slider.classList.remove('teacher', 'student', 'clerk');
+                if (tab === 'teacher') {
+                    slider.classList.add('teacher');
+                } else if (tab === 'student') {
+                    slider.classList.add('student');
+                } else if (tab === 'clerk') {
+                    slider.classList.add('clerk');
+                }
+            }
+
+            // Hide all forms
+            document.querySelectorAll('.login-form').forEach(form => {
+                if (form) {
+                    form.style.display = 'none';
+                }
+            });
+
+            // Show selected form
+            const selectedForm = document.getElementById(tab + 'Form');
+            if (selectedForm) {
+                selectedForm.style.display = 'block';
+                
+                // Clear previous error messages
+                const errorDiv = selectedForm.querySelector('.error-message');
+                if (errorDiv) {
+                    errorDiv.style.display = 'none';
+                    errorDiv.textContent = '';
+                }
+                
+                // Reset form
+                selectedForm.reset();
+                
+                // Focus on first input
+                const firstInput = selectedForm.querySelector('input');
+                if (firstInput) {
+                    firstInput.focus();
+                }
+            }
+        }
+
+        // Add form submit handlers
+        document.addEventListener('DOMContentLoaded', function() {
+            // Admin form
+            const adminForm = document.getElementById('adminForm');
+            if (adminForm) {
+                adminForm.addEventListener('submit', handleAdminLogin);
+            }
+
+            // Teacher form
+            const teacherForm = document.getElementById('teacherForm');
+            if (teacherForm) {
+                teacherForm.addEventListener('submit', handleTeacherLogin);
+            }
+
+            // Student form
+            const studentForm = document.getElementById('studentForm');
+            if (studentForm) {
+                studentForm.addEventListener('submit', handleStudentLogin);
+            }
+
+            // Clerk form
+            const clerkForm = document.getElementById('clerkForm');
+            if (clerkForm) {
+                clerkForm.addEventListener('submit', handleClerkLogin);
+            }
+
+            // Initialize first tab
+            switchTab('admin');
+        });
+
+        // Handle admin login
+        async function handleAdminLogin(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+            const errorDiv = document.getElementById('adminError');
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            
+            try {
+                // Clear previous error
+                if (errorDiv) {
+                    errorDiv.style.display = 'none';
+                }
+
+                // Show loading state
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+                }
+
+                // Sign in with Firebase
+                const userCredential = await window.auth.signInWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+
+                // Check if user is admin
+                const adminSnapshot = await window.db.ref('admins/' + user.uid).once('value');
+                
+                if (!adminSnapshot.exists()) {
+                    throw new Error('You are not authorized as admin');
+                }
+
+                // Get admin data
+                const adminData = adminSnapshot.val();
+                
+                // Store admin session
+                sessionStorage.setItem('isAdminLoggedIn', 'true');
+                sessionStorage.setItem('adminEmail', email);
+                sessionStorage.setItem('userEmail', email);
+                sessionStorage.setItem('userPassword', password);
+                sessionStorage.setItem('adminData', JSON.stringify({
+                    uid: user.uid,
+                    email: email,
+                    ...adminData
+                }));
+
+                console.log('Admin login successful, redirecting to dashboard');
+                
+                // Redirect to admin dashboard
+                window.location.href = 'admin-dashboard.html';
+
+            } catch (error) {
+                console.error('Login error:', error);
+                if (errorDiv) {
+                    errorDiv.style.display = 'block';
+                    errorDiv.textContent = error.message;
+                }
+                // Reset button state
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login as Admin';
+                }
+            }
+        }
+
+        // Handle teacher login
+        async function handleTeacherLogin(event) {
+            event.preventDefault();
+            
+            const teacherIdInput = document.getElementById('teacherId');
+            const passwordInput = document.getElementById('teacherPassword');
+            const errorDiv = document.getElementById('teacherError');
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            
+            try {
+                // Clear previous error
+                if (errorDiv) {
+                    errorDiv.style.display = 'none';
+                    errorDiv.textContent = '';
+                }
+
+                // Show loading state
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+                }
+
+                // Get and validate inputs
+                const teacherId = teacherIdInput ? teacherIdInput.value.trim().toUpperCase() : '';
+                const password = passwordInput ? passwordInput.value : '';
+
+                // Validate inputs
+                if (!teacherId) {
+                    throw new Error('Please enter Teacher ID');
+                }
+                if (!password) {
+                    throw new Error('Please enter password');
+                }
+
+                console.log('Attempting teacher login with ID:', teacherId);
+                
+                // Search for teacher by teacherId in Firebase
+                const teachersRef = window.db.ref('teachers');
+                const snapshot = await teachersRef
+                    .orderByChild('teacherId')
+                    .equalTo(teacherId)
+                    .once('value');
+                
+                console.log('Firebase response:', snapshot.val());
+                
+                const teacherData = snapshot.val();
+                
+                if (!teacherData) {
+                    throw new Error('Invalid Teacher ID');
+                }
+
+                const teacherKey = Object.keys(teacherData)[0];
+                const teacher = teacherData[teacherKey];
+
+                console.log('Found teacher:', { ...teacher, initialPassword: '***' });
+
+                // Check if password exists and matches
+                if (!teacher.initialPassword) {
+                    throw new Error('Password not set for this teacher. Please contact admin.');
+                }
+
+                if (teacher.initialPassword !== password) {
+                    throw new Error('Invalid password');
+                }
+
+                // Sign in with Firebase using teacher email
+                if (teacher.email) {
+                    try {
+                        await window.auth.signInWithEmailAndPassword(teacher.email, password);
+                        console.log('Teacher Firebase auth successful');
+                    } catch (authError) {
+                        console.log('Firebase auth failed, continuing with session-only login:', authError.message);
+                    }
+                }
+
+                // Store teacher data in session
+                sessionStorage.setItem('isTeacherLoggedIn', 'true');
+                sessionStorage.setItem('teacherKey', teacherKey);
+                sessionStorage.setItem('teacherData', JSON.stringify(teacher));
+                if (teacher.email) {
+                    sessionStorage.setItem('userEmail', teacher.email);
+                    sessionStorage.setItem('userPassword', password);
+                }
+
+                console.log('Teacher login successful, redirecting...');
+
+                // Redirect to teacher panel
+                window.location.href = 'teacher-panel.html';
+
+            } catch (error) {
+                console.error('Teacher login error:', error);
+                if (errorDiv) {
+                    errorDiv.style.display = 'block';
+                    errorDiv.textContent = error.message;
+                }
+                // Reset button state
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login as Teacher';
+                }
+            }
+        }
+
+        // Handle student login
+        async function handleStudentLogin(event) {
+            event.preventDefault();
+            
+            const rollNoInput = document.getElementById('studentRollNo');
+            const passwordInput = document.getElementById('studentPassword');
+            const errorDiv = document.getElementById('studentError');
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            
+            try {
+                // Clear previous error
+                if (errorDiv) {
+                    errorDiv.style.display = 'none';
+                    errorDiv.textContent = '';
+                }
+
+                // Show loading state
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+                }
+
+                // Get and validate inputs
+                const rollNo = rollNoInput ? rollNoInput.value.trim().toUpperCase() : '';
+                const password = passwordInput ? passwordInput.value : '';
+
+                // Validate inputs
+                if (!rollNo) {
+                    throw new Error('Please enter roll number');
+                }
+                if (!password) {
+                    throw new Error('Please enter password');
+                }
+
+                console.log('Attempting login with roll number:', rollNo);
+                
+                // Get student data from Firebase
+                const studentsRef = window.db.ref('students');
+                const snapshot = await studentsRef
+                    .orderByChild('rollNo')
+                    .equalTo(rollNo)
+                    .once('value');
+                
+                console.log('Firebase response:', snapshot.val());
+                
+                const studentData = snapshot.val();
+                
+                if (!studentData) {
+                    throw new Error('Invalid roll number');
+                }
+
+                const studentId = Object.keys(studentData)[0];
+                const student = studentData[studentId];
+
+                console.log('Found student:', { ...student, password: '***' });
+
+                // Check if password exists and matches
+                if (!student.password) {
+                    throw new Error('Password not set for this student. Please contact admin.');
+                }
+
+                if (student.password !== password) {
+                    throw new Error('Invalid password');
+                }
+
+                // Store student data in session
+                sessionStorage.setItem('studentId', studentId);
+                sessionStorage.setItem('studentData', JSON.stringify(student));
+                sessionStorage.setItem('isStudentLoggedIn', 'true');
+
+                console.log('Login successful, redirecting...');
+
+                // Redirect to student dashboard
+                window.location.href = 'student-dashboard.html';
+
+            } catch (error) {
+                console.error('Login error:', error);
+                if (errorDiv) {
+                    errorDiv.style.display = 'block';
+                    errorDiv.textContent = error.message;
+                }
+                // Reset button state
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login as Student';
+                }
+            }
+        }
+
+        // Handle clerk login
+        async function handleClerkLogin(event) {
+            event.preventDefault();
+            
+            const clerkIdInput = document.getElementById('clerkId');
+            const passwordInput = document.getElementById('clerkPassword');
+            const errorDiv = document.getElementById('clerkError');
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            
+            try {
+                // Clear previous error
+                if (errorDiv) {
+                    errorDiv.style.display = 'none';
+                    errorDiv.textContent = '';
+                }
+
+                // Show loading state
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+                }
+
+                // Get and validate inputs
+                const clerkId = clerkIdInput ? clerkIdInput.value.trim().toUpperCase() : '';
+                const password = passwordInput ? passwordInput.value : '';
+
+                // Validate inputs
+                if (!clerkId) {
+                    throw new Error('Please enter Clerk ID');
+                }
+                if (!password) {
+                    throw new Error('Please enter password');
+                }
+
+                console.log('Attempting clerk login with ID:', clerkId);
+                
+                // Search for clerk by clerkId in Firebase
+                const clerksRef = window.db.ref('clerks');
+                const snapshot = await clerksRef
+                    .orderByChild('clerkId')
+                    .equalTo(clerkId)
+                    .once('value');
+                
+                console.log('Firebase response:', snapshot.val());
+                
+                const clerkData = snapshot.val();
+                
+                if (!clerkData) {
+                    throw new Error('Invalid Clerk ID');
+                }
+
+                const clerkKey = Object.keys(clerkData)[0];
+                const clerk = clerkData[clerkKey];
+
+                console.log('Found clerk:', { ...clerk, initialPassword: '***' });
+
+                // Check if password exists and matches
+                if (!clerk.initialPassword) {
+                    throw new Error('Password not set for this clerk. Please contact admin.');
+                }
+
+                if (clerk.initialPassword !== password) {
+                    throw new Error('Invalid password');
+                }
+
+                // Store clerk data in session
+                sessionStorage.setItem('isClerkLoggedIn', 'true');
+                sessionStorage.setItem('clerkKey', clerkKey);
+                sessionStorage.setItem('clerkData', JSON.stringify(clerk));
+
+                console.log('Clerk login successful, redirecting...');
+
+                // Redirect to clerk panel
+                window.location.href = 'clerk-panel.html';
+
+            } catch (error) {
+                console.error('Clerk login error:', error);
+                if (errorDiv) {
+                    errorDiv.style.display = 'block';
+                    errorDiv.textContent = error.message;
+                }
+                // Reset button state
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login as Clerk';
+                }
+            }
+        }
+    </script>
+</body>
+</html> 
