@@ -517,28 +517,19 @@
         /* Mobile styles for logout button */
         @media (max-width: 1024px) {
             .logout-button {
-                width: 44px;
-                height: 44px;
-                padding: 0;
-                left: 50%;
-                transform: translateX(-50%);
-                border-radius: 50%;
+                width: 100%;
+                height: auto;
+                padding: 12px;
+                left: 20px;
+                right: 20px;
+                border-radius: 8px;
+                transform: none;
             }
-
             .logout-button span {
-                display: none;
+                display: inline;
             }
-
-            .logout-button i {
-                margin: 0;
-            }
-
-            .logout-button:hover {
-                transform: translateX(-50%) translateY(-2px);
-            }
-            /* Hide sidebar logout on mobile, show header logout */
-            .sidebar .logout-button { display: none; }
-            .header-logout { display: inline-flex !important; }
+            .sidebar .logout-button { display: flex !important; }
+            .header-logout { display: none !important; }
         }
         @media (min-width: 1025px) {
             .header-logout { display: none !important; }
