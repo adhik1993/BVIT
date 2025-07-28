@@ -376,6 +376,18 @@
                 });
                 
                 if (teacherFound && teacherData) {
+                    try {
+                        // Try to sign in with email and password
+                        await firebase.auth().signInWithEmailAndPassword(
+                            `${teacherId}@attendance.com`,
+                            password
+                        );
+                    } catch (authError) {
+                        console.log('Email/password auth failed, trying anonymous:', authError);
+                        // If email/password fails, use anonymous auth
+                        await firebase.auth().signInAnonymously();
+                    }
+
                     // Store teacher data in session
                     sessionStorage.setItem('isTeacherLoggedIn', 'true');
                     sessionStorage.setItem('teacherKey', teacherData.uid);
@@ -405,4 +417,4 @@
     <!-- Firebase Configuration -->
     <script src="firebase-config.js"></script>
 </body>
-</html> 
+</html>
