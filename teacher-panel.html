@@ -1348,6 +1348,19 @@
         
         console.log('Firebase services ready');
 
+        // Ensure dashboard loads only after authentication
+        firebase.auth().onAuthStateChanged(function(user) {
+            if (user) {
+                // User is logged in, proceed to load dashboard
+                handleHashChange();
+            } else {
+                // Not logged in, redirect
+                window.location.href = 'teacher-login.html';
+            }
+        });
+
+        // REMOVE the original handleHashChange(); call below, since it's now inside onAuthStateChanged.
+
         // Check if user is already logged in
         window.onload = async function() {
             console.log('Teacher panel loading...');
@@ -1390,8 +1403,7 @@
         }
     }
     window.applyLabAssistantUI = applyLabAssistantUI;
-    handleHashChange();
-};
+
 
         // Load teacher dashboard initial data
         function loadTeacherDashboard(data) {
