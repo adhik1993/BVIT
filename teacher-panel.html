@@ -30,6 +30,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Panel - BVIT</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <!-- Firebase Initialization -->
+    <script src="firebase-init.js"></script>
     <style>
         :root {
             --primary: #4F46E5;
@@ -1348,46 +1354,49 @@
         
         console.log('Firebase services ready');
 
-        // Ensure dashboard loads only after authentication
-        firebase.auth().onAuthStateChanged(function(user) {
-            if (user) {
-                // User is logged in, proceed to load dashboard
-                handleHashChange();
-            } else {
-                // Not logged in, redirect
-                window.location.href = 'teacher-login.html';
-            }
-        });
-
-        // REMOVE the original handleHashChange(); call below, since it's now inside onAuthStateChanged.
-
         // Check if user is already logged in
         window.onload = async function() {
             console.log('Teacher panel loading...');
             
-            // Wait for Firebase initialization from firebase-config.js
-            if (typeof window.waitForFirebase === 'function') {
-                await window.waitForFirebase();
-            }
-            
-            // Check session storage first
-            const isTeacherLoggedIn = sessionStorage.getItem('isTeacherLoggedIn');
-            const teacherKey = sessionStorage.getItem('teacherKey');
-            const teacherData = sessionStorage.getItem('teacherData');
-            
-            console.log('Session storage:', { isTeacherLoggedIn, teacherKey });
-            
-            // If not properly logged in as teacher, redirect to login
-            if (!isTeacherLoggedIn || !teacherKey || !teacherData) {
-                console.log('Invalid teacher session, redirecting to login');
+            try {
+                // Wait for Firebase initialization
+                await initializeFirebase();
+                
+                // Wait for Firebase auth state
+                await new Promise((resolve) => {
+                    const unsubscribe = firebase.auth().onAuthStateChanged((user) => {
+                        unsubscribe();
+                        resolve(user);
+                    });
+                });
+                
+                // Check both Firebase auth and session storage
+                const currentUser = firebase.auth().currentUser;
+                const isTeacherLoggedIn = sessionStorage.getItem('isTeacherLoggedIn');
+                const teacherKey = sessionStorage.getItem('teacherKey');
+                const teacherData = sessionStorage.getItem('teacherData');
+                
+                console.log('Auth state:', { currentUser, isTeacherLoggedIn, teacherKey });
+                
+                // If not properly authenticated, sign out and redirect
+                if (!currentUser || !isTeacherLoggedIn || !teacherKey || !teacherData) {
+                    console.log('Invalid authentication, redirecting to login');
+                    await firebase.auth().signOut();
+                    sessionStorage.clear();
+                    window.location.href = 'teacher-login.html';
+                    return;
+                }
+                
+                // Teacher verified through both auth and session storage, load panel
+                console.log('Teacher verified, loading panel');
+                window.teacherData = JSON.parse(teacherData);
+            } catch (error) {
+                console.error('Error during authentication check:', error);
+                await firebase.auth().signOut();
                 sessionStorage.clear();
                 window.location.href = 'teacher-login.html';
                 return;
             }
-            
-            // Teacher verified through session storage, load panel
-            console.log('Teacher verified, loading panel');
-            window.teacherData = JSON.parse(teacherData);
 
     // Lab Assistant UI highlight logic
     function applyLabAssistantUI() {
@@ -1403,7 +1412,8 @@
         }
     }
     window.applyLabAssistantUI = applyLabAssistantUI;
-
+    handleHashChange();
+};
 
         // Load teacher dashboard initial data
         function loadTeacherDashboard(data) {
@@ -3611,5 +3621,5 @@ Thank you for marking attendance!
     <!-- Firebase Configuration -->
     <script src="firebase-config.js"></script>
 </body>
-</html> 
+</html>
 
