@@ -1589,7 +1589,13 @@
                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
                 const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
 
-                firebase.database().ref('attendance')
+                const currentUser = firebase.auth().currentUser;
+if (!currentUser) {
+    console.error('No user is logged in. Cannot calculate average attendance.');
+    avgAttendanceElement.textContent = 'Login required';
+    return;
+}
+firebase.database().ref('attendance')
                     .orderByChild('date')
                     .startAt(thirtyDaysAgoStr)
                     .once('value')
