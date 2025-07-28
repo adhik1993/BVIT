@@ -1,0 +1,3597 @@
+<!DOCTYPE html>
+<script>
+// Global Firebase Offline Fallback (must be first)
+(function() {
+    if (typeof window.firebase === 'undefined') {
+        window.firebaseOfflineMode = false;
+        window.firebase = {
+            database: function() {
+                window.firebaseOfflineMode = true;
+                return {
+                    ref: function() { return { on: function() {}, once: function() {}, off: function() {}, set: function() {}, update: function() {}, remove: function() {} }; }
+                };
+            },
+            auth: function() {
+                window.firebaseOfflineMode = true;
+                return {
+                    onAuthStateChanged: function(cb) { cb(null); return function(){}; },
+                    signOut: function() { return Promise.resolve(); },
+                    currentUser: null
+                };
+            },
+            apps: [],
+        };
+    }
+})();
+</script>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Panel - BVIT</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-dark: #4338CA;
+            --secondary: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --info: #3B82F6;
+            --dark: #1F2937;
+            --darker: #111827;
+            --light: #F3F4F6;
+            --lighter: #F9FAFB;
+            --border: #E5E7EB;
+            --text-dark: #1F2937;
+            --text-light: #6B7280;
+            --text-lighter: #9CA3AF;
+            --sidebar-width: 280px;
+            --header-height: 70px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: var(--light);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--darker);
+            min-height: 100vh;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 100;
+            padding-bottom: 80px;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .logo-icon {
+            font-size: 2rem;
+            color: var(--primary);
+        }
+
+        .logo-text {
+            color: white;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            color: var(--text-lighter);
+            text-decoration: none;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .nav-link i {
+            font-size: 1.25rem;
+            width: 1.5rem;
+            text-align: center;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
+        }
+
+        .header {
+            /* Default header styles remain here */
+        }
+        /* Lab Assistant header highlight */
+        .lab-assistant-header {
+            background: #FFF7ED;
+            border-bottom: 4px solid #D97706;
+            border-radius: 0.75rem 0.75rem 0 0;
+            box-shadow: 0 2px 8px 0 rgba(217, 119, 6, 0.08);
+            padding: 1.5rem 2rem 1.5rem 2rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .lab-assistant-badge {
+            display: inline-flex;
+            align-items: center;
+            background: #FDE68A;
+            color: #D97706;
+            font-weight: 600;
+            font-size: 1rem;
+            border-radius: 999px;
+            padding: 0.35em 0.9em 0.35em 0.7em;
+            margin-left: 1.2em;
+            box-shadow: 0 2px 6px 0 rgba(217, 119, 6, 0.09);
+            gap: 0.5em;
+        }
+        .lab-assistant-badge i {
+            margin-right: 0.35em;
+        }
+        .lab-assistant-header .page-title {
+            color: #D97706;
+        }
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-icon {
+            width: 4rem;
+            height: 4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+
+        .stat-classes { background: rgba(79, 70, 229, 0.1); color: var(--primary); }
+        .stat-students { background: rgba(16, 185, 129, 0.1); color: var(--secondary); }
+        .stat-attendance { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .stat-performance { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .action-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid var(--border);
+        }
+
+        .action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary);
+        }
+
+        .action-icon {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .action-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        /* Logout Button */
+        .logout-button {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            padding: 12px;
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .logout-button:hover {
+            background: #DC2626;
+            transform: translateY(-2px);
+        }
+
+        .logout-button i {
+            font-size: 1.2rem;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            display: none;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--light);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error Message */
+        .error-message {
+            background: var(--danger);
+            color: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 5rem;
+                padding: 1rem;
+            }
+
+            .logo-text, .nav-text {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 5rem;
+            }
+
+            .logout-button span {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+        }
+        /* Add these new styles */
+        .attendance-form {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .students-list {
+            margin-top: 2rem;
+        }
+
+        .reports-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .date-range {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .report-data {
+            margin-top: 2rem;
+        }
+
+        .schedule-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .timetable {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .weekday {
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+        }
+
+        .weekday h3 {
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+
+        .notifications-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .notification-filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-dark);
+        }
+
+        .btn-outline:hover {
+            background: var(--light);
+        }
+
+        .notifications-list {
+            min-height: 200px;
+        }
+
+        .no-notifications {
+            text-align: center;
+            color: var(--text-light);
+            padding: 2rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+        }
+        /* End of new styles */
+        /* Attendance Page Styles */
+        .attendance-container {
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .filter-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .form-group label i {
+            color: #4F46E5;
+        }
+
+        .form-group select,
+        .form-group input[type="text"],
+        .form-group input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            background: white;
+        }
+
+        .form-group select:focus,
+        .form-group input[type="text"]:focus,
+        .form-group input[type="date"]:focus {
+            border-color: #4F46E5;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .form-group select:hover,
+        .form-group input[type="text"]:hover,
+        .form-group input[type="date"]:hover {
+            border-color: #9CA3AF;
+        }
+
+        .attendance-list {
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .attendance-table th,
+        .attendance-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .attendance-table th {
+            background: #F9FAFB;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .attendance-table tr:hover {
+            background: #F9FAFB;
+        }
+
+        .attendance-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-attendance {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            background: #E5E7EB;
+            color: #374151;
+        }
+
+        .btn-attendance.active {
+            background: #4F46E5;
+            color: white;
+        }
+
+        .btn-attendance:hover {
+            opacity: 0.9;
+        }
+
+        .status-cell {
+            font-weight: 500;
+        }
+
+        .status-cell.present {
+            color: #059669;
+        }
+
+        .status-cell.absent {
+            color: #DC2626;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6B7280;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: #9CA3AF;
+        }
+
+        .empty-state p {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .empty-state .subtitle {
+            font-size: 14px;
+            color: #6B7280;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 40px;
+            color: #6B7280;
+        }
+
+        .loading-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: #4F46E5;
+        }
+
+        .loading-state p {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .list-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+            margin: 0;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .action-btn.present-all {
+            background: #059669;
+            color: white;
+        }
+
+        .action-btn.absent-all {
+            background: #DC2626;
+            color: white;
+        }
+
+        .action-btn:hover {
+            opacity: 0.9;
+        }
+        .attendance-toggle {
+            position: relative;
+            display: inline-block;
+        }
+
+        .attendance-toggle input {
+            display: none;
+        }
+
+        .attendance-toggle label {
+            display: inline-block;
+            width: 120px;
+            height: 34px;
+            border-radius: 17px;
+            background: #e9ecef;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .attendance-toggle label:after {
+            content: '';
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: white;
+            top: 4px;
+            left: 4px;
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .attendance-toggle input:checked + label {
+            background: var(--secondary);
+        }
+
+        .attendance-toggle input:checked + label:after {
+            left: calc(100% - 30px);
+        }
+
+        .attendance-toggle label span {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .attendance-toggle label .present {
+            right: 10px;
+            color: #495057;
+        }
+
+        .attendance-toggle label .absent {
+            left: 10px;
+            color: #495057;
+        }
+
+        .attendance-toggle input:checked + label .present {
+            color: white;
+        }
+
+        .attendance-toggle input:checked + label .absent {
+            color: transparent;
+        }
+
+        /* Table Styles */
+        .attendance-table {
+            width: 100%;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-top: 2rem;
+        }
+
+        .attendance-table th,
+        .attendance-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .attendance-table th {
+            background: var(--darker);
+            color: white;
+            font-weight: 500;
+        }
+
+        .attendance-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .attendance-table tr:hover {
+            background: var(--lighter);
+        }
+
+        .empty-state {
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-light);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: var(--text-lighter);
+            margin-bottom: 1rem;
+        }
+
+        .empty-state p {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-lighter);
+        }
+
+        /* Loading State */
+        .loading-state {
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-light);
+        }
+
+        .loading-state i {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .loading-state p {
+            font-size: 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .fa-spin {
+            animation: spin 1s linear infinite;
+        }
+        /* Add these new styles for attendance buttons */
+        .attendance-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn-attendance {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            background: #f3f4f6;
+            color: #6b7280;
+            min-width: 100px;
+            justify-content: center;
+        }
+
+        .btn-attendance.present {
+            background: rgba(16, 185, 129, 0.1);
+            color: #059669;
+        }
+
+        .btn-attendance.present.active {
+            background: #059669;
+            color: white;
+        }
+
+        .btn-attendance.absent {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+        }
+
+        .btn-attendance.absent.active {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn-attendance:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-attendance i {
+            font-size: 16px;
+        }
+
+        /* Quick action buttons */
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .action-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn.present-all {
+            background: #059669;
+            color: white;
+        }
+
+        .action-btn.absent-all {
+            background: #dc2626;
+            color: white;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Student row hover effect */
+        tr:hover .btn-attendance {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Report styles */
+        .filter-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .date-range {
+            display: flex;
+            gap: 10px;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 20px;
+        }
+
+        .report-table th,
+        .report-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .report-table th {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .report-table tr:hover {
+            background: var(--primary-light);
+        }
+
+        .percentage-bar {
+            position: relative;
+            width: 100%;
+            height: 20px;
+            background: #f3f4f6;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .percentage-bar .bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: var(--primary);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        .percentage-bar span {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-dark);
+            font-weight: 500;
+            font-size: 12px;
+            text-shadow: 0 0 2px white;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+        }
+
+        .loading-state i {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        /* Add these new styles for settings page */
+        .settings-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .settings-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .settings-header i {
+            font-size: 2rem;
+            color: var(--primary);
+            background: var(--primary-light);
+            padding: 1rem;
+            border-radius: 50%;
+        }
+
+        .settings-header h2 {
+            color: var(--text-dark);
+            font-size: 1.5rem;
+            margin: 0;
+        }
+
+        .settings-section {
+            background: var(--lighter);
+            padding: 2rem;
+            border-radius: 1rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .settings-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .settings-section h3 {
+            color: var(--primary);
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .settings-section h3 i {
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .password-form {
+            max-width: 400px;
+        }
+
+        .password-form .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .password-form label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        .password-form input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .password-form input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-light);
+            outline: none;
+        }
+
+        .password-requirements {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .password-requirements .title {
+            color: var(--text-dark);
+            font-weight: 500;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .password-requirements .title i {
+            color: var(--primary);
+        }
+
+        .password-requirements ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .password-requirements li {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-light);
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            transition: all 0.3s ease;
+        }
+
+        .password-requirements li.valid {
+            color: var(--secondary);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .password-requirements li i {
+            font-size: 1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        .submit-btn {
+            background: var(--primary);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            margin-top: 1.5rem;
+        }
+
+        .submit-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .submit-btn:disabled {
+            background: var(--text-light);
+            cursor: not-allowed;
+        }
+
+        .submit-btn i {
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 768px) {
+            .settings-container {
+                padding: 1rem;
+            }
+
+            .settings-section {
+                padding: 1.5rem;
+            }
+
+            .password-form {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+                </div>
+
+    <!-- Error Message -->
+    <div class="error-message" id="errorMessage"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-chalkboard-teacher logo-icon"></i>
+            <span class="logo-text">Teacher Panel</span>
+            </div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a href="#dashboard" class="nav-link active" data-page="dashboard">
+                    <i class="fas fa-home"></i>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#take-attendance" class="nav-link" data-page="take-attendance">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span class="nav-text">Take Attendance</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#view-reports" class="nav-link" data-page="view-reports">
+                    <i class="fas fa-chart-bar"></i>
+                    <span class="nav-text">View Reports</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#settings" class="nav-link" data-page="settings">
+                    <i class="fas fa-cog"></i>
+                    <span class="nav-text">Settings</span>
+                </a>
+            </li>
+        </ul>
+        <button class="logout-button" onclick="handleLogout()">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Logout</span>
+        </button>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div id="mainHeader" class="header">
+            <h1 class="page-title">Welcome, <span id="teacherName">Teacher</span>
+                <span id="roleBadge"></span>
+            </h1>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="exportReport()">
+                    <i class="fas fa-download"></i>
+                    Export Report
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon stat-classes">
+                    <i class="fas fa-book"></i>
+                </div>
+                <div class="stat-value" id="assignedClasses">0</div>
+                <div class="stat-label">Assigned Classes</div>
+                </div>
+            <div class="stat-card">
+                <div class="stat-icon stat-students">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-value" id="totalStudents">0</div>
+                <div class="stat-label">Total Students</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon stat-attendance">
+                    <i class="fas fa-clipboard-check"></i>
+        </div>
+                <div class="stat-value" id="todayAttendance">0%</div>
+                <div class="stat-label">Today's Attendance</div>
+    </div>
+            <div class="stat-card">
+                <div class="stat-icon stat-performance">
+                    <i class="fas fa-chart-line"></i>
+    </div>
+                <div class="stat-value" id="avgAttendance">0%</div>
+                <div class="stat-label">Average Attendance</div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <div class="action-card" onclick="handleNavigation('take-attendance.html')">
+                <i class="fas fa-clipboard-check action-icon"></i>
+                <div class="action-title">Take Attendance</div>
+    </div>
+            <div class="action-card" onclick="handleNavigation('view-reports.html')">
+                <i class="fas fa-chart-bar action-icon"></i>
+                <div class="action-title">View Reports</div>
+    </div>
+        </div>
+    </main>
+
+    <script src="firebase-config.js"></script>
+    <script>
+        // Global teacher data
+        let teacherData = null;
+        
+        console.log('Firebase services ready');
+
+        // Check if user is already logged in
+        window.onload = async function() {
+            console.log('Teacher panel loading...');
+            
+            // Wait for Firebase initialization from firebase-config.js
+            if (typeof window.waitForFirebase === 'function') {
+                await window.waitForFirebase();
+            }
+            
+            // Check session storage first
+            const isTeacherLoggedIn = sessionStorage.getItem('isTeacherLoggedIn');
+            const teacherKey = sessionStorage.getItem('teacherKey');
+            const teacherData = sessionStorage.getItem('teacherData');
+            
+            console.log('Session storage:', { isTeacherLoggedIn, teacherKey });
+            
+            // If not properly logged in as teacher, redirect to login
+            if (!isTeacherLoggedIn || !teacherKey || !teacherData) {
+                console.log('Invalid teacher session, redirecting to login');
+                sessionStorage.clear();
+                window.location.href = 'teacher-login.html';
+                return;
+            }
+            
+            // Teacher verified through session storage, load panel
+            console.log('Teacher verified, loading panel');
+            window.teacherData = JSON.parse(teacherData);
+
+    // Lab Assistant UI highlight logic
+    function applyLabAssistantUI() {
+        if (window.teacherData && window.teacherData.role === 'Lab Assistant') {
+            const header = document.getElementById('mainHeader');
+            if (header) header.classList.add('lab-assistant-header');
+            const badge = document.getElementById('roleBadge');
+            if (badge) {
+                badge.innerHTML = '<span class="lab-assistant-badge"><i class="fas fa-flask"></i> Lab Assistant</span>';
+            }
+            const nameSpan = document.getElementById('teacherName');
+            if (nameSpan) nameSpan.style.color = '#D97706';
+        }
+    }
+    window.applyLabAssistantUI = applyLabAssistantUI;
+    handleHashChange();
+};
+
+        // Load teacher dashboard initial data
+        function loadTeacherDashboard(data) {
+            teacherData = data;
+            loadDashboardContent();
+        }
+
+        // Handle hash-based navigation
+        window.addEventListener('hashchange', handleHashChange);
+
+        function handleHashChange() {
+            const hash = window.location.hash.slice(1) || 'dashboard';
+            updateActiveTab(hash);
+            loadContent(hash);
+        }
+
+        function updateActiveTab(hash) {
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('data-page') === hash) {
+                    link.classList.add('active');
+                }
+            });
+        }
+
+        function loadContent(hash) {
+            const mainContent = document.querySelector('.main-content');
+            if (!mainContent) return;
+            
+            // Show loading state
+            mainContent.innerHTML = '<div class="loading">Loading...</div>';
+
+            switch(hash) {
+                case 'dashboard':
+                    loadDashboardContent();
+                    break;
+                case 'take-attendance':
+                    loadAttendanceContent();
+                    break;
+                case 'view-reports':
+                    loadReportsContent();
+                    break;
+                case 'settings':
+                    loadSettingsContent();
+                    break;
+                default:
+                    loadDashboardContent();
+            }
+        }
+
+        // Content loading functions
+        function loadDashboardContent() {
+            if (!window.teacherData) {
+                console.log('Teacher data not available');
+                return;
+            }
+            const teacherData = window.teacherData;
+            
+            const mainContent = document.querySelector('.main-content');
+            if (!mainContent) return;
+            
+            mainContent.innerHTML = `
+                <div class="header">
+                    <h1 class="page-title">Welcome, ${teacherData.firstName} ${teacherData.lastName}</h1>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon stat-classes">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <div class="stat-value">${teacherData.classes ? teacherData.classes.length : 0}</div>
+                        <div class="stat-label">Assigned Classes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-students">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-value" id="totalStudents">Loading...</div>
+                        <div class="stat-label">Total Students</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-attendance">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <div class="stat-value" id="todayAttendance">Loading...</div>
+                        <div class="stat-label">Today's Attendance</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-performance">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-value" id="avgAttendance">Loading...</div>
+                        <div class="stat-label">Average Attendance</div>
+                    </div>
+                </div>
+                <div class="quick-actions">
+                    <div class="action-card" onclick="window.location.hash='take-attendance'">
+                        <i class="fas fa-clipboard-check action-icon"></i>
+                        <div class="action-title">Take Attendance</div>
+                    </div>
+                    <div class="action-card" onclick="window.location.hash='view-reports'">
+                        <i class="fas fa-chart-bar action-icon"></i>
+                        <div class="action-title">View Reports</div>
+                    </div>
+                </div>
+            `;
+
+            // Load total students count
+            const totalStudentsElement = document.getElementById('totalStudents');
+            if (totalStudentsElement) {
+                firebase.database().ref('students').once('value')
+                    .then((snapshot) => {
+                        let totalStudents = 0;
+                        const students = snapshot.val() || {};
+
+                        // Get teacher's assigned classes
+                        const teacherClasses = teacherData.classes || [];
+                        console.log('Teacher Classes:', teacherClasses);
+
+                        Object.values(students).forEach(student => {
+                            // Get student's class code
+                            const studentYear = (student.year || '').toString().toUpperCase();
+                            const studentDept = (student.department || student.branch || '').toString().toUpperCase();
+                            
+                            // Convert year format
+                            let yearCode = '';
+                            if (['FIRST', 'FIRST YEAR', '1'].includes(studentYear)) yearCode = 'FY';
+                            else if (['SECOND', 'SECOND YEAR', '2'].includes(studentYear)) yearCode = 'SY';
+                            else if (['THIRD', 'THIRD YEAR', '3'].includes(studentYear)) yearCode = 'TY';
+                            else if (['FOURTH', 'FOURTH YEAR', '4', 'BE'].includes(studentYear)) yearCode = 'BE';
+                            else yearCode = studentYear; // If already in correct format
+
+                            // Check if student's year matches any of teacher's assigned years
+                            const isTeacherYear = teacherClasses.some(teacherClass => {
+                                // Teacher class might be just year (FY, SY, etc.) or full class code (FYME, SYME, etc.)
+                                if (teacherClass.length <= 2) {
+                                    // If teacher class is just year, match only the year part
+                                    return yearCode === teacherClass;
+                                } else {
+                                    // If teacher class is full code, match the year part
+                                    return yearCode === teacherClass.substring(0, 2);
+                                }
+                            });
+
+                            // Count student if year matches
+                            if (isTeacherYear) {
+                                totalStudents++;
+                            }
+                        });
+
+                        totalStudentsElement.textContent = totalStudents;
+                    })
+                    .catch((error) => {
+                        console.error('Error loading total students:', error);
+                        totalStudentsElement.textContent = 'Error';
+                    });
+            }
+
+            // Load today's attendance
+            const todayAttendanceElement = document.getElementById('todayAttendance');
+            if (todayAttendanceElement) {
+                const today = new Date().toISOString().split('T')[0];
+                firebase.database().ref('attendance')
+                    .orderByChild('date')
+                    .equalTo(today)
+                    .once('value')
+                    .then((snapshot) => {
+                        let totalPresent = 0;
+                        let totalStudents = 0;
+
+                        snapshot.forEach(record => {
+                            const data = record.val();
+                            if (data.teacherId === firebase.auth().currentUser.uid) {
+                                const students = data.students || {};
+                                totalStudents += Object.keys(students).length;
+                                totalPresent += Object.values(students).filter(status => status === true).length;
+                            }
+                        });
+
+                        const todayPercentage = totalStudents > 0 
+                            ? Math.round((totalPresent / totalStudents) * 100) 
+                            : 0;
+                        todayAttendanceElement.textContent = todayPercentage + '%';
+                    })
+                    .catch((error) => {
+                        console.error('Error loading today\'s attendance:', error);
+                        todayAttendanceElement.textContent = 'Error';
+                    });
+            }
+
+            // Load average attendance
+            const avgAttendanceElement = document.getElementById('avgAttendance');
+            if (avgAttendanceElement) {
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+
+                firebase.database().ref('attendance')
+                    .orderByChild('date')
+                    .startAt(thirtyDaysAgoStr)
+                    .once('value')
+                    .then((snapshot) => {
+                        let totalPresent = 0;
+                        let totalStudents = 0;
+
+                        snapshot.forEach(record => {
+                            const data = record.val();
+                            if (data.teacherId === firebase.auth().currentUser.uid) {
+                                const students = data.students || {};
+                                totalStudents += Object.keys(students).length;
+                                totalPresent += Object.values(students).filter(status => status === true).length;
+                            }
+                        });
+
+                        const avgPercentage = totalStudents > 0 
+                            ? Math.round((totalPresent / totalStudents) * 100) 
+                            : 0;
+                        avgAttendanceElement.textContent = avgPercentage + '%';
+                    })
+                    .catch((error) => {
+                        console.error('Error loading average attendance:', error);
+                        avgAttendanceElement.textContent = 'Error';
+                    });
+            }
+        }
+
+        // Add submit attendance function
+        async function submitAttendance() {
+            await waitForFirebase();
+            
+            const department = document.getElementById('department').value;
+            const year = document.getElementById('year').value;
+            const division = document.getElementById('division')?.value;
+            const subject = document.getElementById('subject').value;
+            const selectedDate = document.getElementById('date').value;
+            const selectedLectureType = document.getElementById('lectureType').value;
+            
+            if (!department || !year || !subject || !selectedDate || !selectedLectureType) {
+                showErrorMessage('Please fill all required fields first');
+                return;
+            }
+
+            // Get teacher ID
+            const teacherId = firebase.auth().currentUser?.uid;
+            if (!teacherId) {
+                showErrorMessage('Please login again');
+                window.location.href = 'teacher-login.html';
+                return;
+            }
+
+            // Get all students' attendance status
+            const rows = document.querySelectorAll('tr[data-student-id]');
+            if (rows.length === 0) {
+                showErrorMessage('No students found to submit attendance');
+                return;
+            }
+
+            let unmarkedCount = 0;
+            const attendance = {};
+            
+            rows.forEach(row => {
+                const studentId = row.getAttribute('data-student-id');
+                const presentBtn = row.querySelector('.btn-attendance.present');
+                const absentBtn = row.querySelector('.btn-attendance.absent');
+                
+                if (presentBtn.classList.contains('active')) {
+                    attendance[studentId] = true;
+                } else if (absentBtn.classList.contains('active')) {
+                    attendance[studentId] = false;
+                } else {
+                    unmarkedCount++;
+                }
+            });
+
+            if (unmarkedCount > 0) {
+                const proceed = confirm(`${unmarkedCount} students are not marked. Do you want to proceed?`);
+                if (!proceed) return;
+            }
+
+            // Show loading state
+            const submitBtn = document.getElementById('submitAttendanceBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+            try {
+            // Generate class code and attendance key
+            const classCode = year + department + (division ? '-' + division : '');
+            const attendanceKey = `${selectedDate}_${classCode}_${selectedLectureType}_${subject}`;
+            
+            // Update attendance in Firebase
+                await window.db.ref('attendance/' + attendanceKey).update({
+                date: selectedDate,
+                class: classCode,
+                department: department,
+                year: year,
+                division: division || null,
+                subject: subject,
+                lectureType: selectedLectureType,
+                    teacherId: teacherId,
+                    submittedAt: firebase.database.ServerValue.TIMESTAMP,
+                    students: attendance,
+                    unmarkedCount: unmarkedCount
+                });
+
+                // Calculate attendance statistics
+                const totalStudents = Object.keys(attendance).length;
+                const presentStudents = Object.values(attendance).filter(status => status === true).length;
+
+                // Send Telegram notification
+                try {
+                    const teacherData = JSON.parse(sessionStorage.getItem('teacherData'));
+                    const teacherName = `${teacherData.firstName} ${teacherData.lastName}`;
+                    
+                    // Calculate attendance statistics
+                    const totalStudents = Object.keys(attendance).length;
+                    const presentStudents = Object.values(attendance).filter(status => status === true).length;
+                    const percentage = Math.round((presentStudents/totalStudents) * 100);
+
+                    const message = `
+✅ Attendance Submitted Successfully!
+
+📚 Class: ${classCode}
+📖 Subject: ${subject}
+📅 Date: ${selectedDate}
+⏰ Time: ${new Date().toLocaleTimeString()}
+
+📊 Attendance Summary:
+👥 Total Students: ${totalStudents}
+✓ Present: ${presentStudents}
+📈 Percentage: ${percentage}%
+
+Thank you for marking attendance!
+`;
+                    
+                    // Send to teacher's personal chat
+                    if (teacherData.telegramChatId) {
+                        await sendTelegramMessage(message, teacherData.telegramChatId);
+                    }
+                } catch (error) {
+                    console.error('Error sending Telegram notification:', error);
+                }
+
+                // Show success message
+                showSuccessMessage('Attendance submitted successfully!');
+                
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                
+                // Reload students to show updated status
+                loadStudents(classCode);
+
+            } catch (error) {
+                console.error('Error submitting attendance:', error);
+                showErrorMessage('Error submitting attendance. Please try again.');
+                
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        }
+
+        // Function to show success message
+        function showSuccessMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'success-message';
+            messageDiv.innerHTML = `
+                <i class="fas fa-check-circle"></i>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 3000);
+        }
+
+        // Function to show error message
+        function showErrorMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'error-message';
+            messageDiv.innerHTML = `
+                <i class="fas fa-exclamation-circle"></i>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 3000);
+        }
+
+        // Function to populate year dropdown with assigned years
+        function populateYearDropdown() {
+            const yearSelect = document.getElementById('year');
+            if (!yearSelect) return;
+
+            const teacherData = JSON.parse(sessionStorage.getItem('teacherData'));
+            if (!teacherData || !teacherData.classes) {
+                yearSelect.innerHTML = '<option value="">No classes assigned</option>';
+                return;
+            }
+
+            yearSelect.innerHTML = '<option value="">-- Select Year --</option>';
+            const yearMap = {
+                'FY': 'First Year (FY)',
+                'SY': 'Second Year (SY)',
+                'TY': 'Third Year (TY)',
+                'BE': 'Final Year (BE)'
+            };
+
+            teacherData.classes.forEach(year => {
+                yearSelect.innerHTML += `<option value="${year}">${yearMap[year] || year}</option>`;
+            });
+        }
+
+        // Function to populate department dropdown with assigned departments
+        function populateDepartmentDropdown() {
+            const departmentSelect = document.getElementById('department');
+            if (!departmentSelect) return;
+
+            const teacherData = JSON.parse(sessionStorage.getItem('teacherData'));
+            if (!teacherData || !teacherData.departments) {
+                departmentSelect.innerHTML = '<option value="">No departments assigned</option>';
+                return;
+            }
+
+            departmentSelect.innerHTML = '<option value="">-- Select Department --</option>';
+            teacherData.departments.forEach(dept => {
+                departmentSelect.innerHTML += `<option value="${dept.code}">${dept.name}</option>`;
+            });
+        }
+
+        // Function to check if department has divisions
+        function departmentHasDivisions(department) {
+            // Only CT and IT departments have divisions
+            return ['CT', 'IT'].includes(department);
+        }
+
+        // Function to update division visibility
+        function updateDivisionVisibility() {
+            const departmentSelect = document.getElementById('department');
+            const divisionGroup = document.querySelector('.division-group');
+            
+            if (!departmentSelect || !divisionGroup) return;
+            
+            const selectedDepartment = departmentSelect.value;
+            
+            if (departmentHasDivisions(selectedDepartment)) {
+                divisionGroup.style.display = 'block';
+            } else {
+                divisionGroup.style.display = 'none';
+                const divisionSelect = document.getElementById('division');
+                if (divisionSelect) {
+                    divisionSelect.value = '';
+                }
+            }
+        }
+
+        // Update loadAttendanceContent function
+        function loadAttendanceContent() {
+            console.log('Loading attendance content');
+            
+            const mainContent = document.querySelector('.main-content');
+            if (!mainContent) {
+                console.error('Main content element not found');
+                return;
+            }
+            
+            // Get teacher data from session storage
+            const teacherData = JSON.parse(sessionStorage.getItem('teacherData'));
+            console.log('Teacher data:', teacherData);
+            
+            if (!teacherData || !teacherData.departments || teacherData.departments.length === 0) {
+                console.log('No departments assigned to teacher');
+                mainContent.innerHTML = `
+                    <div class="header">
+                        <h1 class="page-title">Take Attendance</h1>
+                    </div>
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>No departments assigned</p>
+                        <div class="subtitle">You don't have any departments assigned to you yet</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            console.log('Rendering attendance form');
+            mainContent.innerHTML = `
+                <div class="header">
+                    <h1 class="page-title">Take Attendance</h1>
+                </div>
+
+                <div class="attendance-container">
+                    <div class="filter-section">
+                        <div class="form-group">
+                            <label for="department">
+                                <i class="fas fa-building"></i>
+                                Select Department
+                            </label>
+                            <select id="department" onchange="updateClassOptions(); updateDivisionVisibility();">
+                                <option value="">-- Select Department --</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="year">
+                                <i class="fas fa-graduation-cap"></i>
+                                Select Year
+                            </label>
+                            <select id="year" onchange="updateClassOptions()">
+                                <option value="">-- Select Year --</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group division-group" style="display: none;">
+                            <label for="division">
+                                <i class="fas fa-users"></i>
+                                Select Division
+                            </label>
+                            <select id="division">
+                                <option value="">All Divisions</option>
+                                <option value="A">Division A</option>
+                                <option value="B">Division B</option>
+                                <option value="C">Division C</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="subject">
+                                <i class="fas fa-book"></i>
+                                Subject
+                            </label>
+                            <input type="text" id="subject" placeholder="Enter subject name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="lectureType">
+                                <i class="fas fa-chalkboard-teacher"></i>
+                                Lecture Type
+                            </label>
+                            <select id="lectureType" onchange="loadStudents()">
+                                <option value="">-- Select Type --</option>
+                                <option value="theory">Theory</option>
+                                <option value="practical">Practical</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="date">
+                                <i class="fas fa-calendar-alt"></i>
+                                Date
+                            </label>
+                            <input type="date" id="date" onchange="loadStudents()" value="${new Date().toISOString().split('T')[0]}">
+                        </div>
+                    </div>
+
+                    <div class="attendance-list">
+                        <div class="list-header">
+                            <h2>Students List</h2>
+                            <div class="quick-actions">
+                                <button onclick="markAllPresent()" class="action-btn present-all">
+                                    <i class="fas fa-check-circle"></i> Mark All Present
+                                </button>
+                                <button onclick="markAllAbsent()" class="action-btn absent-all">
+                                    <i class="fas fa-times-circle"></i> Mark All Absent
+                                </button>
+                            </div>
+                        </div>
+
+                        <table class="attendance-table">
+                            <thead>
+                                <tr>
+                                    <th>Roll No</th>
+                                    <th>Student Name</th>
+                                    <th>Attendance</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendance-body">
+                                <tr>
+                                    <td colspan="3" class="text-center">
+                                        <div class="empty-state">
+                                            <i class="fas fa-info-circle"></i>
+                                            <p>Please fill all required fields</p>
+                                            <div class="subtitle">Department, Year, Subject, Date and Lecture Type are required</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="submit-section">
+                            <button id="submitAttendanceBtn" onclick="submitAttendance()" class="submit-btn">
+                                <i class="fas fa-save"></i> Submit Attendance
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Populate dropdowns with assigned departments and years
+            populateDepartmentDropdown();
+            populateYearDropdown();
+            
+            // Update division visibility based on selected department
+            updateDivisionVisibility();
+            if (typeof window.applyLabAssistantUI === 'function') window.applyLabAssistantUI();
+        }
+
+        // Add styles for submit button and success message
+        const style = document.createElement('style');
+        style.textContent = `
+            .submit-section {
+                margin-top: 20px;
+                padding: 20px;
+                display: flex;
+                justify-content: center;
+            }
+
+            .submit-btn {
+                padding: 12px 24px;
+                background: #4F46E5;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 16px;
+                font-weight: 500;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                transition: all 0.2s;
+            }
+
+            .submit-btn:hover {
+                background: #4338CA;
+            }
+
+            .submit-btn:disabled {
+                background: #9CA3AF;
+                cursor: not-allowed;
+            }
+
+            .success-message {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: #059669;
+                color: white;
+                padding: 16px 24px;
+                border-radius: 6px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                animation: slideIn 0.3s ease-out;
+            }
+
+            .success-message i {
+                font-size: 20px;
+            }
+
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        function loadReportsContent() {
+            const mainContent = document.querySelector('.main-content');
+            const teacherData = JSON.parse(sessionStorage.getItem('teacherData'));
+            const teacherId = firebase.auth().currentUser?.uid;
+
+            if (!teacherData || !teacherId) {
+                mainContent.innerHTML = `
+                    <div class="header">
+                        <h1 class="page-title">View Reports</h1>
+                    </div>
+                    <div class="reports-container">
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p>Please login again</p>
+                            <div class="subtitle">Your session has expired</div>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            mainContent.innerHTML = `
+                <div class="header">
+                    <h1 class="page-title">Attendance Reports</h1>
+                </div>
+                <div class="reports-container">
+                    <div class="filter-section">
+                        <div class="form-group">
+                            <label for="reportDepartment">
+                                <i class="fas fa-building"></i>
+                                Department
+                            </label>
+                            <select id="reportDepartment" onchange="updateReportDivisionVisibility()">
+                                <option value="">All Departments</option>
+                                ${teacherData.departments.map(dept => 
+                                    `<option value="${dept.code}">${dept.name}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reportYear">
+                                <i class="fas fa-graduation-cap"></i>
+                                Year
+                            </label>
+                            <select id="reportYear" onchange="loadAttendanceReport()">
+                                <option value="">All Years</option>
+                                ${teacherData.classes.map(cls => 
+                                    `<option value="${cls}">${getYearFullName(cls)}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group" id="reportDivisionGroup" style="display: none;">
+                            <label for="reportDivision">
+                                <i class="fas fa-users"></i>
+                                Division
+                            </label>
+                            <select id="reportDivision" onchange="loadAttendanceReport()">
+                                <option value="">All Divisions</option>
+                                <option value="A">Division A</option>
+                                <option value="B">Division B</option>
+                                <option value="C">Division C</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reportDateRange">
+                                <i class="fas fa-calendar"></i>
+                                Date Range
+                            </label>
+                            <div class="date-range">
+                                <input type="date" id="startDate" onchange="loadAttendanceReport()">
+                                <input type="date" id="endDate" onchange="loadAttendanceReport()">
+                            </div>
+                        </div>
+                    </div>
+                    <div id="reportContent" class="report-content">
+                        <div class="loading-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Select filters to view reports</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Set default date range (last 7 days)
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 7);
+            
+            document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+            document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
+            
+            // Initialize division visibility
+            updateReportDivisionVisibility();
+            
+            // Load initial report
+            loadAttendanceReport();
+            if (typeof window.applyLabAssistantUI === 'function') window.applyLabAssistantUI();
+        }
+
+        async function loadAttendanceReport() {
+            const reportContent = document.getElementById('reportContent');
+            const department = document.getElementById('reportDepartment').value;
+            const year = document.getElementById('reportYear').value;
+            const division = document.getElementById('reportDivision').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const teacherId = firebase.auth().currentUser?.uid;
+
+            if (!startDate || !endDate) {
+                showErrorMessage('Please select date range');
+                return;
+            }
+
+            reportContent.innerHTML = `
+                <div class="loading-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading attendance records...</p>
+                </div>
+            `;
+
+            try {
+                // Get teacher's assigned classes
+                const teacherData = JSON.parse(sessionStorage.getItem('teacherData'));
+                if (!teacherData) {
+                    throw new Error('Teacher data not found');
+                }
+
+                console.log('Teacher Data:', teacherData);
+
+                // Helper function to normalize year format
+                function normalizeYear(year) {
+                    if (!year) return '';
+                    year = year.toString().toUpperCase().trim();
+                    if (['1', 'FIRST', 'FIRST YEAR', 'FY'].includes(year)) return 'FY';
+                    if (['2', 'SECOND', 'SECOND YEAR', 'SY'].includes(year)) return 'SY';
+                    if (['3', 'THIRD', 'THIRD YEAR', 'TY'].includes(year)) return 'TY';
+                    if (['4', 'FOURTH', 'FOURTH YEAR', 'BE'].includes(year)) return 'BE';
+                    return year;
+                }
+
+                // Helper function to normalize department code
+                function normalizeDepartment(dept) {
+                    if (!dept) return '';
+                    dept = dept.toString().toUpperCase().trim();
+                    const deptMap = {
+                        'IT': ['IT', 'INFORMATION TECHNOLOGY', 'INFO TECH'],
+                        'CT': ['CT', 'COMPUTER TECHNOLOGY', 'COMPUTER', 'COMP'],
+                        'ME': ['ME', 'MECHANICAL', 'MECH'],
+                        'CE': ['CE', 'CIVIL'],
+                        'EE': ['EE', 'ELECTRICAL'],
+                        'ET': ['ET', 'ELECTRONICS', 'E&TC']
+                    };
+                    
+                    for (const [standard, variations] of Object.entries(deptMap)) {
+                        if (variations.includes(dept)) {
+                            return standard;
+                        }
+                    }
+                    return dept;
+                }
+
+                // Query attendance records
+                const snapshot = await firebase.database()
+                    .ref('attendance')
+                    .orderByChild('date')
+                    .startAt(startDate)
+                    .endAt(endDate)
+                    .once('value');
+
+                const records = [];
+                
+                snapshot.forEach(record => {
+                    const data = record.val();
+                    if (!data) return;
+
+                    console.log('Processing record:', data);
+
+                    // Check if this record is for teacher's class
+                    const recordClass = data.class || '';
+                    let recordDept = '';
+                    let recordYear = '';
+
+                    // Handle different class code formats
+                    if (recordClass.includes('-')) {
+                        // Format: SY-IT-A
+                        const parts = recordClass.split('-');
+                        recordYear = parts[0];
+                        recordDept = parts[1];
+                    } else {
+                        // Format: SYIT
+                        recordYear = recordClass.substring(0, 2);
+                        recordDept = recordClass.substring(2);
+                    }
+
+                    recordDept = normalizeDepartment(recordDept);
+                    recordYear = normalizeYear(recordYear);
+
+                    console.log('Parsed class:', {
+                        original: recordClass,
+                        year: recordYear,
+                        department: recordDept
+                    });
+
+                    // Check if teacher teaches this class
+                    const teachesClass = teacherData.classes.some(cls => {
+                        const teacherYear = normalizeYear(cls);
+                        console.log('Comparing years:', {
+                            recordYear,
+                            teacherYear,
+                            matches: recordYear === teacherYear
+                        });
+                        return recordYear === teacherYear;
+                    });
+
+                    // Check if teacher teaches this department
+                    const teachesDepartment = teacherData.departments.some(dept => {
+                        const teacherDept = normalizeDepartment(dept.code);
+                        console.log('Comparing departments:', {
+                            recordDept,
+                            teacherDept,
+                            matches: recordDept === teacherDept
+                        });
+                        return recordDept === teacherDept;
+                    });
+
+                    // Only include records for teacher's classes and departments
+                    const matchesDepartmentFilter = !department || normalizeDepartment(department) === recordDept;
+
+                    console.log('Match results:', {
+                        teachesClass,
+                        teachesDepartment,
+                        matchesDepartmentFilter
+                    });
+
+                    if (teachesClass && teachesDepartment && matchesDepartmentFilter) {
+                        // Calculate attendance percentage
+                        const students = data.students || {};
+                        const totalStudents = Object.keys(students).length;
+                        const presentStudents = Object.values(students)
+                            .filter(status => status === true || status === 'present').length;
+                        const percentage = totalStudents > 0 
+                            ? Math.round((presentStudents / totalStudents) * 100) 
+                            : 0;
+                        
+                        records.push({
+                            date: data.date,
+                            class: data.class,
+                            subject: data.subject || '-',
+                            lectureType: data.lectureType || '-',
+                            totalStudents,
+                            presentStudents,
+                            percentage
+                        });
+
+                        console.log('Added record:', {
+                            date: data.date,
+                            class: data.class,
+                            subject: data.subject,
+                            lectureType: data.lectureType,
+                            present: presentStudents,
+                            total: totalStudents,
+                            percentage
+                        });
+                    }
+                });
+
+                // Sort records by date (newest first)
+                records.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                console.log('Total records found:', records.length);
+
+                if (records.length === 0) {
+                    reportContent.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard-list"></i>
+                            <p>No attendance records found</p>
+                            <div class="subtitle">Try changing the filters or date range</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Generate report HTML
+                let html = `
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Class</th>
+                                <th>Subject</th>
+                                <th>Type</th>
+                                <th>Present/Total</th>
+                                <th>Percentage</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                records.forEach(record => {
+                    const percentageClass = record.percentage < 75 ? 'low' : 'good';
+                    const statusText = record.percentage < 75 ? 'Below Required' : 'Good';
+                    const statusClass = record.percentage < 75 ? 'status-badge low' : 'status-badge good';
+                    
+                    html += `
+                        <tr>
+                            <td>${formatDate(record.date)}</td>
+                            <td>${record.class}</td>
+                            <td>${record.subject}</td>
+                            <td style="text-transform: capitalize;">${record.lectureType}</td>
+                            <td>
+                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                    <div class="attendance-count present">
+                                        <i class="fas fa-check"></i>
+                                        Present: ${record.presentStudents}/${record.totalStudents}
+                                        <small style="color: #047857">(${Math.round((record.presentStudents/record.totalStudents) * 100)}%)</small>
+                                    </div>
+                                    <div class="attendance-count absent">
+                                        <i class="fas fa-times"></i>
+                                        Absent: ${record.totalStudents - record.presentStudents}/${record.totalStudents}
+                                        <small style="color: #DC2626">(${Math.round(((record.totalStudents - record.presentStudents)/record.totalStudents) * 100)}%)</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="percentage-bar ${percentageClass}">
+                                    <div class="bar" style="width: ${record.percentage}%"></div>
+                                    <span>${record.percentage}%</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="${statusClass}">
+                                    <i class="fas ${record.percentage >= 75 ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                                    ${statusText}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                        </tbody>
+                    </table>
+                `;
+
+                reportContent.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error loading attendance report:', error);
+                reportContent.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>Error loading report</p>
+                        <div class="subtitle">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-IN', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function loadScheduleContent() {
+            const mainContent = document.querySelector('.main-content');
+            mainContent.innerHTML = `                <div class="header">
+                    <h1 class="page-title">Schedule</h1>
+                </div>
+                <div class="schedule-container">
+                    <div class="timetable">
+                        <div class="weekday">
+                            <h3>Monday</h3>
+                            <div class="classes">
+                                <!-- Classes will be loaded here -->
+                            </div>
+                        </div>
+                        <div class="weekday">
+                            <h3>Tuesday</h3>
+                            <div class="classes">
+                                <!-- Classes will be loaded here -->
+                            </div>
+                        </div>
+                        <!-- Add other weekdays similarly -->
+                    </div>
+                </div>
+            `;
+        }
+
+        function loadNotificationsContent() {
+            const mainContent = document.querySelector('.main-content');
+            mainContent.innerHTML = `                <div class="header">
+                    <h1 class="page-title">Notifications</h1>
+                        </div>
+                <div class="notifications-container">
+                    <div class="notification-filters">
+                        <button class="btn btn-primary active">All</button>
+                        <button class="btn btn-outline">Unread</button>
+                        <button class="btn btn-outline">Important</button>
+                    </div>
+                    <div class="notifications-list">
+                        <!-- Notifications will be loaded here -->
+                        <div class="no-notifications">
+                            No new notifications
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Handle logout
+        async function handleLogout() {
+            // Graceful logout with offline handling
+            try {
+                sessionStorage.clear();
+                if (window.firebaseOfflineMode || typeof firebase === 'undefined' || !firebase.auth) {
+                    // Offline or no firebase, just redirect
+                    showErrorMessage('तुम्ही ऑफलाइन आहात किंवा लॉगआउट करण्यात अडचण आहे. पुन्हा लॉगिन करा.');
+                    setTimeout(() => { window.location.href = 'teacher-login.html'; }, 1200);
+                    return;
+                }
+                await firebase.auth().signOut();
+                window.location.href = 'teacher-login.html';
+            } catch (e) {
+                showErrorMessage('लॉगआउट करताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा.');
+                setTimeout(() => {
+                    firebase.auth().signOut().then(() => {
+                        window.location.href = 'teacher-login.html';
+                    });
+                }, 1500);
+            }
+        }
+
+        // Export report function
+        function exportReport() {
+            alert('Export feature coming soon!');
+        }
+
+        // Debounce function to limit function calls
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Add event listeners for form fields
+        document.addEventListener('DOMContentLoaded', function() {
+            // Debounced version of updateClassOptions
+            const debouncedUpdate = debounce(updateClassOptions, 300);
+            
+            // These fields trigger student load
+            const loadTriggerFields = ['department', 'year', 'subject', 'date', 'lectureType'];
+            loadTriggerFields.forEach(fieldId => {
+                const element = document.getElementById(fieldId);
+                if (element) {
+                    element.addEventListener('change', debouncedUpdate);
+                }
+            });
+            
+            // Division changes don't trigger load, just update the filter
+            const divisionSelect = document.getElementById('division');
+            if (divisionSelect) {
+                divisionSelect.addEventListener('change', function() {
+                    const department = document.getElementById('department').value;
+                    const year = document.getElementById('year').value;
+                    const subject = document.getElementById('subject')?.value;
+                    const selectedDate = document.getElementById('date')?.value;
+                    const selectedLectureType = document.getElementById('lectureType')?.value;
+                    
+                    if (department && year && subject && selectedDate && selectedLectureType) {
+                        const classCode = year + department + (this.value ? '-' + this.value : '');
+                        loadStudents(classCode);
+                    }
+                });
+            }
+
+            // Pre-select department if teacher has only one department
+            const teacherData = JSON.parse(sessionStorage.getItem('teacherData'));
+            if (teacherData?.departments?.length === 1) {
+                const departmentSelect = document.getElementById('department');
+                if (departmentSelect) {
+                    departmentSelect.value = teacherData.departments[0].code; // Use code for pre-selection
+                    debouncedUpdate();
+                }
+            }
+
+            // Pre-select year if teacher has only one year
+            if (teacherData?.classes?.length === 1) {
+                const yearSelect = document.getElementById('year');
+                if (yearSelect) {
+                    yearSelect.value = teacherData.classes[0];
+                    debouncedUpdate();
+                }
+            }
+        });
+
+        // Update class options based on selections
+        async function updateClassOptions() {
+            console.log('updateClassOptions called');
+            
+            const department = document.getElementById('department').value;
+            const year = document.getElementById('year').value;
+            const division = document.getElementById('division')?.value || '';
+            const subject = document.getElementById('subject')?.value;
+            const selectedDate = document.getElementById('date')?.value;
+            const selectedLectureType = document.getElementById('lectureType')?.value;
+            
+            console.log('Form values:', {
+                department,
+                year,
+                division,
+                subject,
+                selectedDate,
+                selectedLectureType
+            });
+            
+            // Get teacher data
+            const teacherData = JSON.parse(sessionStorage.getItem('teacherData'));
+            console.log('Teacher data:', teacherData);
+            
+            // Check if teacher has this year assigned
+            if (teacherData && teacherData.classes && teacherData.classes.includes(year)) {
+                console.log('Year is assigned to teacher');
+                
+                // Generate class code (e.g., "FYME-A")
+                const classCode = year + department + (division ? '-' + division : '');
+                console.log('Generated class code:', classCode);
+                
+                // Show loading state while checking fields
+                const tableBody = document.getElementById('attendance-body');
+                if (tableBody) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="text-center">
+                                <div class="loading-state">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    <p>Loading students...</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
+                
+                // Check required fields - division is optional
+                if (!department || !year || !subject || !selectedDate || !selectedLectureType) {
+                    console.log('Missing required fields:', {
+                        department: !!department,
+                        year: !!year,
+                        subject: !!subject,
+                        date: !!selectedDate,
+                        lectureType: !!selectedLectureType
+                    });
+                    
+                    if (tableBody) {
+                        tableBody.innerHTML = `
+                            <tr>
+                                <td colspan="3" class="text-center">
+                                    <div class="empty-state">
+                                        <i class="fas fa-info-circle"></i>
+                                        <p>Please fill all required fields</p>
+                                        <div class="subtitle">Department, Year, Subject, Date and Lecture Type are required</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                } else {
+                    // All required fields are filled, load students
+                    console.log('All required fields filled, loading students');
+                    try {
+                        await loadStudents(classCode);
+                    } catch (error) {
+                        console.error('Error loading students:', error);
+                        if (tableBody) {
+                            tableBody.innerHTML = `
+                                <tr>
+                                    <td colspan="3" class="text-center">
+                                        <div class="empty-state">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                            <p>Error loading students</p>
+                                            <div class="subtitle">Please try again</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                    }
+                }
+            } else {
+                console.log('Year is not assigned to teacher');
+                const tableBody = document.getElementById('attendance-body');
+                if (tableBody) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="text-center">
+                                <div class="empty-state">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    <p>You are not assigned to this year</p>
+                                    <div class="subtitle">Please select a year that is assigned to you</div>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+        }
+
+        // Function to get department full name from code
+        function getDepartmentFullName(code) {
+            const departmentMap = {
+                'CT': 'Computer Technology',
+                'IT': 'Information Technology',
+                'ME': 'Mechanical Engineering',
+                'CE': 'Civil Engineering',
+                'EE': 'Electrical Engineering',
+                'ET': 'Electronics & Telecommunication',
+                'AI': 'Artificial Intelligence'
+            };
+            return departmentMap[code] || code;
+        }
+
+        // Function to normalize year format
+        function normalizeYear(year) {
+            if (!year) return '';
+            year = year.toString().toUpperCase();
+            
+            if (['1', 'FIRST', 'FIRST YEAR', 'FY'].includes(year)) return 'FY';
+            if (['2', 'SECOND', 'SECOND YEAR', 'SY'].includes(year)) return 'SY';
+            if (['3', 'THIRD', 'THIRD YEAR', 'TY'].includes(year)) return 'TY';
+            if (['4', 'FOURTH', 'FOURTH YEAR', 'BE', 'FINAL YEAR'].includes(year)) return 'BE';
+            return year;
+        }
+
+        async function loadStudents(classCode) {
+            console.log('Loading students for class:', classCode);
+            
+            const department = document.getElementById('department').value;
+            const year = document.getElementById('year').value;
+            const division = document.getElementById('division')?.value;
+            const subject = document.getElementById('subject').value;
+            const selectedDate = document.getElementById('date')?.value;
+            const selectedLectureType = document.getElementById('lectureType')?.value;
+            const tableBody = document.getElementById('attendance-body');
+
+            // Check if all required fields are filled
+            if (!department || !year || !subject || !selectedDate || !selectedLectureType) {
+                console.log('Missing required fields:', {
+                    department: !!department,
+                    year: !!year,
+                    subject: !!subject,
+                    date: !!selectedDate,
+                    lectureType: !!selectedLectureType
+                });
+                
+                if (tableBody) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="text-center">
+                                <div class="empty-state">
+                                    <i class="fas fa-info-circle"></i>
+                                    <p>Please fill all required fields</p>
+                                    <div class="subtitle">Department, Year, Subject, Date and Lecture Type are required</div>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
+                return;
+            }
+            
+            // Show loading state
+            if (tableBody) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="text-center">
+                            <div class="loading-state">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Loading students...</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            await waitForFirebase();
+            console.log('Fetching students from Firebase');
+            console.log('Query parameters:', { department, year, division });
+            
+            const studentsRef = window.db.ref('students');
+            
+            try {
+                const snapshot = await studentsRef.once('value');
+                const students = [];
+                
+                if (!snapshot.exists()) {
+                    console.log('No students found');
+                    if (tableBody) {
+                        tableBody.innerHTML = `
+                            <tr>
+                                <td colspan="3" class="text-center">
+                                    <div class="empty-state">
+                                        <i class="fas fa-user-slash"></i>
+                                        <p>No students found</p>
+                                        <div class="subtitle">Add students from the Student Management section</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                    return;
+                }
+
+                // Get department full name
+                const departmentFullName = getDepartmentFullName(department);
+                console.log('Looking for department:', departmentFullName);
+
+                // Normalize selected year
+                const normalizedYear = normalizeYear(year);
+                console.log('Looking for year:', normalizedYear);
+
+                snapshot.forEach((childSnapshot) => {
+                    const student = childSnapshot.val();
+                    
+                    // Check department/branch match
+                    const studentDept = student.department || student.branch || '';
+                    const matchesDepartment = studentDept.toLowerCase() === departmentFullName.toLowerCase();
+                    
+                    if (!matchesDepartment) {
+                        console.log('Department mismatch:', studentDept, 'vs', departmentFullName);
+                        return;
+                    }
+
+                    // Check year match
+                    const studentYear = normalizeYear(student.year);
+                    const matchesYear = studentYear === normalizedYear;
+                    
+                    if (!matchesYear) {
+                        console.log('Year mismatch:', studentYear, 'vs', normalizedYear);
+                        return;
+                    }
+
+                    // Check division only for Computer Technology
+                    if (departmentFullName === 'Computer Technology' && division) {
+                        const studentDivision = student.division || 'A';  // Default to A if not specified
+                        if (studentDivision !== division) {
+                            console.log('Division mismatch:', studentDivision, 'vs', division);
+                            return;
+                        }
+                    }
+
+                    // Get student name
+                    let firstName = student.firstName;
+                    let lastName = student.lastName;
+                    
+                    if (!firstName && student.name) {
+                        const nameParts = student.name.split(' ');
+                        firstName = nameParts[0];
+                        lastName = nameParts.slice(1).join(' ');
+                    }
+                    
+                    students.push({
+                        id: childSnapshot.key,
+                        ...student,
+                        firstName: firstName || 'Unknown',
+                        lastName: lastName || '',
+                        rollNo: student.rollNo || '-'
+                    });
+                });
+
+                console.log('Found matching students:', students.length);
+                
+                // Sort students by roll number
+                students.sort((a, b) => {
+                    const rollA = parseInt(a.rollNo) || 0;
+                    const rollB = parseInt(b.rollNo) || 0;
+                    return rollA - rollB;
+                });
+
+                if (students.length === 0) {
+                    if (tableBody) {
+                        tableBody.innerHTML = `
+                            <tr>
+                                <td colspan="3" class="text-center">
+                                    <div class="empty-state">
+                                        <i class="fas fa-user-slash"></i>
+                                        <p>No students found</p>
+                                        <div class="subtitle">No students found in selected class</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                    return;
+                }
+
+                let html = '';
+                students.forEach(student => {
+                    const studentName = student.name || `${student.firstName} ${student.lastName}`;
+                    html += `
+                        <tr data-student-id="${student.id}">
+                            <td>${student.rollNo || '-'}</td>
+                            <td>${studentName.trim()}</td>
+                            <td>
+                                <div class="attendance-buttons">
+                                    <button class="btn-attendance present" 
+                                        onclick="markAttendance('${student.id}', true)">
+                                        <i class="fas fa-check"></i>
+                                        Present
+                                    </button>
+                                    <button class="btn-attendance absent" 
+                                        onclick="markAttendance('${student.id}', false)">
+                                        <i class="fas fa-times"></i>
+                                        Absent
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                if (tableBody) {
+                    tableBody.innerHTML = html;
+                }
+
+            } catch (error) {
+                console.error('Error loading students:', error);
+                if (tableBody) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="text-center">
+                                <div class="empty-state">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    <p>Error loading students</p>
+                                    <div class="subtitle">${error.message}</div>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+        }
+
+        // Function to mark attendance for a student
+        function markAttendance(studentId, isPresent) {
+            const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
+            if (!row) return;
+
+            const presentBtn = row.querySelector('.btn-attendance.present');
+            const absentBtn = row.querySelector('.btn-attendance.absent');
+
+            if (isPresent) {
+                presentBtn.classList.add('active');
+                absentBtn.classList.remove('active');
+            } else {
+                presentBtn.classList.remove('active');
+                absentBtn.classList.add('active');
+            }
+
+            // Get attendance key and update Firebase
+            const department = document.getElementById('department').value;
+            const year = document.getElementById('year').value;
+            const division = document.getElementById('division')?.value;
+            const subject = document.getElementById('subject').value;
+            const selectedDate = document.getElementById('date').value;
+            const selectedLectureType = document.getElementById('lectureType').value;
+            
+            if (!department || !year || !subject || !selectedDate || !selectedLectureType) {
+                showErrorMessage('Please fill all required fields first');
+                return;
+            }
+
+            const classCode = year + department + (division ? '-' + division : '');
+            const attendanceKey = `${selectedDate}_${classCode}_${selectedLectureType}_${subject}`;
+            
+            updateAttendance(studentId, attendanceKey, isPresent);
+        }
+
+        // Update mark all functions
+        function markAllPresent() {
+            const rows = document.querySelectorAll('tr[data-student-id]');
+            const promises = [];
+            
+            rows.forEach(row => {
+                const studentId = row.getAttribute('data-student-id');
+                const presentBtn = row.querySelector('.btn-attendance.present');
+                const absentBtn = row.querySelector('.btn-attendance.absent');
+                
+                // Update UI
+                presentBtn.classList.add('active');
+                absentBtn.classList.remove('active');
+                
+                // Get attendance key
+                const department = document.getElementById('department').value;
+                const year = document.getElementById('year').value;
+                const division = document.getElementById('division')?.value;
+                const subject = document.getElementById('subject').value;
+                const selectedDate = document.getElementById('date').value;
+                const selectedLectureType = document.getElementById('lectureType').value;
+                
+                if (!department || !year || !subject || !selectedDate || !selectedLectureType) {
+                    showErrorMessage('Please fill all required fields first');
+                    return;
+                }
+
+                const classCode = year + department + (division ? '-' + division : '');
+                const attendanceKey = `${selectedDate}_${classCode}_${selectedLectureType}_${subject}`;
+                
+                // Add promise to array
+                promises.push(updateAttendance(studentId, attendanceKey, true));
+            });
+
+            // Wait for all updates to complete
+            Promise.all(promises)
+                .then(() => {
+                    showSuccessMessage('Marked all students present');
+                })
+                .catch(error => {
+                    console.error('Error marking all present:', error);
+                    showErrorMessage('Error marking all students present');
+                });
+        }
+
+        function markAllAbsent() {
+            const rows = document.querySelectorAll('tr[data-student-id]');
+            const promises = [];
+            
+            rows.forEach(row => {
+                const studentId = row.getAttribute('data-student-id');
+                const presentBtn = row.querySelector('.btn-attendance.present');
+                const absentBtn = row.querySelector('.btn-attendance.absent');
+                
+                // Update UI
+                presentBtn.classList.remove('active');
+                absentBtn.classList.add('active');
+                
+                // Get attendance key
+                const department = document.getElementById('department').value;
+                const year = document.getElementById('year').value;
+                const division = document.getElementById('division')?.value;
+                const subject = document.getElementById('subject').value;
+                const selectedDate = document.getElementById('date').value;
+                const selectedLectureType = document.getElementById('lectureType').value;
+                
+                if (!department || !year || !subject || !selectedDate || !selectedLectureType) {
+                    showErrorMessage('Please fill all required fields first');
+                    return;
+                }
+
+                const classCode = year + department + (division ? '-' + division : '');
+                const attendanceKey = `${selectedDate}_${classCode}_${selectedLectureType}_${subject}`;
+                
+                // Add promise to array
+                promises.push(updateAttendance(studentId, attendanceKey, false));
+            });
+
+            // Wait for all updates to complete
+            Promise.all(promises)
+                .then(() => {
+                    showSuccessMessage('Marked all students absent');
+                })
+                .catch(error => {
+                    console.error('Error marking all absent:', error);
+                    showErrorMessage('Error marking all students absent');
+                });
+        }
+
+        // Function to update attendance in Firebase
+        async function updateAttendance(studentId, attendanceKey, isPresent) {
+            try {
+                // Use teacherKey from sessionStorage for ID
+                const teacherKey = sessionStorage.getItem('teacherKey');
+                if (!teacherKey) {
+                    showErrorMessage('Please login again');
+                    window.location.href = 'teacher-login.html';
+                    return;
+                }
+                const teacherId = teacherKey;
+
+                // Get current attendance record
+                const attendanceRef = firebase.database().ref('attendance').child(attendanceKey);
+                const snapshot = await attendanceRef.once('value');
+                const attendanceData = snapshot.val() || {
+                    date: attendanceKey.split('_')[0],
+                    class: attendanceKey.split('_')[1],
+                    lectureType: attendanceKey.split('_')[2],
+                    subject: attendanceKey.split('_')[3],
+                    teacherId: teacherId, // Now from sessionStorage
+                    students: {}
+                };
+
+                // Update student's attendance
+                attendanceData.students = attendanceData.students || {};
+                attendanceData.students[studentId] = isPresent ? 'present' : 'absent';
+
+                // Save to Firebase
+                await attendanceRef.set(attendanceData);
+            } catch (error) {
+                console.error('Error updating attendance:', error);
+                showErrorMessage('Error updating attendance');
+                throw error; // Re-throw to be caught by the caller
+            }
+        }
+
+        // Load teacher's classes into the select dropdown
+        function loadTeacherClasses() {
+            console.log('Loading teacher classes');
+            
+            const classSelect = document.getElementById('class');
+            if (!classSelect) {
+                console.log('Class select element not found');
+                return;
+            }
+
+            // Show loading state
+            classSelect.innerHTML = '<option value="">Loading classes...</option>';
+            
+            // Get teacher ID from session storage
+            const teacherId = sessionStorage.getItem('teacherId');
+            if (!teacherId) {
+                console.error('Teacher ID not found in session');
+                classSelect.innerHTML = '<option value="">Error: Please refresh page</option>';
+                return;
+            }
+            
+            console.log('Teacher ID:', teacherId);
+            
+            // Use stored teacher data if available
+            const storedTeacherData = sessionStorage.getItem('teacherData');
+            if (storedTeacherData) {
+                const teacherData = JSON.parse(storedTeacherData);
+                console.log('Using stored teacher data:', teacherData);
+                
+                if (teacherData && teacherData.classes) {
+                    classSelect.innerHTML = '<option value="">-- Select Class --</option>';
+                    
+                    if (teacherData.classes.length > 0) {
+                        console.log('Classes found:', teacherData.classes);
+                        teacherData.classes.forEach(className => {
+                            classSelect.innerHTML += `<option value="${className}">${className}</option>`;
+                        });
+                    } else {
+                        console.log('No classes assigned');
+                        classSelect.innerHTML = '<option value="">No classes assigned</option>';
+                    }
+                    return;
+                }
+            }
+            
+            console.log('Fetching teacher data from Firebase');
+            
+            // Fetch teacher data if not available
+            db.ref('teachers/' + teacherId).once('value')
+                .then((snapshot) => {
+                    console.log('Firebase response:', snapshot.val());
+                    
+                    if (snapshot.exists()) {
+                        const teacher = snapshot.val();
+                        teacherData = teacher; // Update global teacherData
+                        
+                        classSelect.innerHTML = '<option value="">-- Select Class --</option>';
+                        
+                        if (teacher.classes && teacher.classes.length > 0) {
+                            console.log('Classes found:', teacher.classes);
+                            teacher.classes.forEach(className => {
+                                classSelect.innerHTML += `<option value="${className}">${className}</option>`;
+                            });
+                        } else {
+                            console.log('No classes assigned');
+                            classSelect.innerHTML = '<option value="">No classes assigned</option>';
+                        }
+                    } else {
+                        console.log('Teacher data not found');
+                        classSelect.innerHTML = '<option value="">Error loading classes</option>';
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error loading classes:', error);
+                    classSelect.innerHTML = '<option value="">Error loading classes</option>';
+                });
+        }
+
+        // Function to show loading overlay
+        function showLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.style.display = 'flex';
+        }
+
+        // Function to hide loading overlay
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        // Function to show error message
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        function loadSettingsContent() {
+            const mainContent = document.querySelector('.main-content');
+            mainContent.innerHTML = `
+                <div class="header">
+                    <h1 class="page-title">Settings</h1>
+                </div>
+                <div class="settings-container">
+                    <div class="settings-header">
+                        <i class="fas fa-user-cog"></i>
+                        <h2>Account Settings</h2>
+                    </div>
+                    <div class="settings-section">
+                        <h3>
+                            <i class="fas fa-lock"></i>
+                            Change Password
+                        </h3>
+                        <form id="passwordForm" class="password-form" onsubmit="changePassword(event)">
+                            <div class="form-group">
+                                <label for="currentPassword">Current Password</label>
+                                <input type="password" id="currentPassword" required 
+                                    placeholder="Enter your current password">
+                            </div>
+                            <div class="form-group">
+                                <label for="newPassword">New Password</label>
+                                <input type="password" id="newPassword" required 
+                                    placeholder="Enter your new password"
+                                    onkeyup="checkPasswordStrength()">
+                            </div>
+                            <div class="form-group">
+                                <label for="confirmPassword">Confirm New Password</label>
+                                <input type="password" id="confirmPassword" required 
+                                    placeholder="Confirm your new password">
+                            </div>
+                            <div class="password-requirements">
+                                <div class="title">
+                                    <i class="fas fa-shield-alt"></i>
+                                    Password Requirements
+                                </div>
+                                <ul id="passwordChecklist">
+                                    <li id="lengthCheck">
+                                        <i class="fas fa-circle"></i>
+                                        At least 8 characters
+                                    </li>
+                                    <li id="upperCheck">
+                                        <i class="fas fa-circle"></i>
+                                        At least one uppercase letter
+                                    </li>
+                                    <li id="lowerCheck">
+                                        <i class="fas fa-circle"></i>
+                                        At least one lowercase letter
+                                    </li>
+                                    <li id="numberCheck">
+                                        <i class="fas fa-circle"></i>
+                                        At least one number
+                                    </li>
+                                    <li id="specialCheck">
+                                        <i class="fas fa-circle"></i>
+                                        At least one special character
+                                    </li>
+                                </ul>
+                            </div>
+                            <button type="submit" class="submit-btn" id="changePasswordBtn">
+                                <i class="fas fa-key"></i>
+                                Change Password
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function checkPasswordStrength() {
+            const password = document.getElementById('newPassword').value;
+            
+            // Check length
+            const lengthValid = password.length >= 8;
+            updateCheckmark('lengthCheck', lengthValid);
+            
+            // Check uppercase
+            const upperValid = /[A-Z]/.test(password);
+            updateCheckmark('upperCheck', upperValid);
+            
+            // Check lowercase
+            const lowerValid = /[a-z]/.test(password);
+            updateCheckmark('lowerCheck', lowerValid);
+            
+            // Check numbers
+            const numberValid = /[0-9]/.test(password);
+            updateCheckmark('numberCheck', numberValid);
+            
+            // Check special characters
+            const specialValid = /[!@#$%^&*]/.test(password);
+            updateCheckmark('specialCheck', specialValid);
+        }
+
+        function updateCheckmark(id, isValid) {
+            const element = document.getElementById(id);
+            if (isValid) {
+                element.classList.add('valid');
+                element.querySelector('i').className = 'fas fa-check-circle';
+            } else {
+                element.classList.remove('valid');
+                element.querySelector('i').className = 'fas fa-circle';
+            }
+        }
+
+        async function changePassword(event) {
+            event.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // Validate passwords
+            if (newPassword !== confirmPassword) {
+                showErrorMessage('New passwords do not match');
+                return;
+            }
+            
+            // Check password requirements
+            if (!isPasswordValid(newPassword)) {
+                showErrorMessage('Please meet all password requirements');
+                return;
+            }
+
+            // Disable submit button
+            const submitBtn = document.getElementById('changePasswordBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Changing Password...';
+            
+            try {
+                // Get teacher data from session
+                const teacherKey = sessionStorage.getItem('teacherKey');
+                const teacherDataStr = sessionStorage.getItem('teacherData');
+                
+                if (!teacherKey || !teacherDataStr) {
+                    showErrorMessage('Session expired. Please login again.');
+                    window.location.href = 'teacher-login.html';
+                    return;
+                }
+                
+                const teacherData = JSON.parse(teacherDataStr);
+                
+                // Verify current password
+                if (teacherData.initialPassword !== currentPassword) {
+                    showErrorMessage('Current password is incorrect');
+                    return;
+                }
+
+                // Update password in database
+                await firebase.database().ref('teachers/' + teacherKey).update({
+                    initialPassword: newPassword,
+                    lastPasswordChange: firebase.database.ServerValue.TIMESTAMP
+                });
+                
+                // Update session storage with new password
+                teacherData.initialPassword = newPassword;
+                sessionStorage.setItem('teacherData', JSON.stringify(teacherData));
+                
+                // Show success message
+                showSuccessMessage('Password changed successfully!');
+                
+                // Clear form
+                document.getElementById('passwordForm').reset();
+                
+                // Reset password strength indicators
+                const checklistItems = document.querySelectorAll('#passwordChecklist li');
+                checklistItems.forEach(item => {
+                    item.classList.remove('valid');
+                    item.querySelector('i').className = 'fas fa-circle';
+                });
+                
+                console.log('Password changed successfully for teacher:', teacherData.firstName);
+                
+            } catch (error) {
+                console.error('Error changing password:', error);
+                let errorMessage = 'Error changing password. Please try again.';
+                
+                switch (error.code) {
+                    case 'auth/wrong-password':
+                        errorMessage = 'Current password is incorrect';
+                        break;
+                    case 'auth/weak-password':
+                        errorMessage = 'New password is too weak';
+                        break;
+                    case 'auth/requires-recent-login':
+                        errorMessage = 'Please login again before changing password';
+                        setTimeout(() => {
+                            firebase.auth().signOut().then(() => {
+                                window.location.href = 'teacher-login.html';
+                            });
+                        }, 2000);
+                        break;
+                    case 'auth/internal-error':
+                        errorMessage = 'Please login again and try changing password';
+                        setTimeout(() => {
+                            firebase.auth().signOut().then(() => {
+                                window.location.href = 'teacher-login.html';
+                            });
+                        }, 2000);
+                        break;
+                }
+                
+                showErrorMessage(errorMessage);
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-key"></i> Change Password';
+            }
+        }
+
+        function isPasswordValid(password) {
+            return password.length >= 8 &&
+                   /[A-Z]/.test(password) &&
+                   /[a-z]/.test(password) &&
+                   /[0-9]/.test(password) &&
+                   /[!@#$%^&*]/.test(password);
+        }
+
+        // Function to update dashboard stats
+        async function updateDashboardStats() {
+            try {
+                const totalStudentsElement = document.getElementById('totalStudents');
+                const totalClassesElement = document.getElementById('totalClasses');
+                const averageAttendanceElement = document.getElementById('averageAttendance');
+                const recentActivitiesElement = document.getElementById('recentActivities');
+
+                // Get teacher's assigned classes
+                const teacherClasses = teacherData.classes || [];
+                console.log('Teacher Classes:', teacherClasses);
+
+                // Get total students count
+                const studentsSnapshot = await firebase.database().ref('students').once('value');
+                let totalStudents = 0;
+                const students = studentsSnapshot.val() || {};
+
+                Object.values(students).forEach(student => {
+                    // Get student's class code
+                    const studentYear = (student.year || '').toString().toUpperCase();
+                    const studentDept = (student.department || student.branch || '').toString().toUpperCase();
+                    
+                    // Convert year format
+                    let yearCode = '';
+                    if (['FIRST', 'FIRST YEAR', '1'].includes(studentYear)) yearCode = 'FY';
+                    else if (['SECOND', 'SECOND YEAR', '2'].includes(studentYear)) yearCode = 'SY';
+                    else if (['THIRD', 'THIRD YEAR', '3'].includes(studentYear)) yearCode = 'TY';
+                    else if (['FOURTH', 'FOURTH YEAR', '4', 'BE'].includes(studentYear)) yearCode = 'BE';
+                    else yearCode = studentYear;
+
+                    // Check if student's year matches any of teacher's assigned years
+                    if (teacherClasses.includes(yearCode)) {
+                        totalStudents++;
+                    }
+                });
+
+                // Update UI elements if they exist
+                if (totalStudentsElement) {
+                    totalStudentsElement.textContent = totalStudents;
+                }
+                if (totalClassesElement) {
+                    totalClassesElement.textContent = teacherClasses.length;
+                }
+
+                // Get average attendance
+                const attendanceSnapshot = await firebase.database()
+                    .ref('attendance')
+                    .orderByChild('teacherId')
+                    .equalTo(teacherId)
+                    .once('value');
+
+                let totalAttendance = 0;
+                let attendanceCount = 0;
+
+                attendanceSnapshot.forEach(record => {
+                    const data = record.val();
+                    const students = data.students || {};
+                    const totalStudents = Object.keys(students).length;
+                    const presentStudents = Object.values(students).filter(status => status === true).length;
+                    if (totalStudents > 0) {
+                        totalAttendance += (presentStudents / totalStudents) * 100;
+                        attendanceCount++;
+                    }
+                });
+
+                const averageAttendance = attendanceCount > 0 ? Math.round(totalAttendance / attendanceCount) : 0;
+
+                if (averageAttendanceElement) {
+                    averageAttendanceElement.textContent = `${averageAttendance}%`;
+                }
+
+                // Update recent activities
+                if (recentActivitiesElement) {
+                    const activitiesSnapshot = await firebase.database()
+                        .ref('activities')
+                        .orderByChild('teacherId')
+                        .equalTo(teacherId)
+                        .limitToLast(5)
+                        .once('value');
+
+                    const activities = [];
+                    activitiesSnapshot.forEach(activity => {
+                        activities.unshift({
+                            id: activity.key,
+                            ...activity.val()
+                        });
+                    });
+
+                    if (activities.length > 0) {
+                        recentActivitiesElement.innerHTML = activities.map(activity => `
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    <i class="fas fa-${getActivityIcon(activity.type)}"></i>
+                                </div>
+                                <div class="activity-details">
+                                    <div class="activity-title">${activity.title}</div>
+                                    <div class="activity-time">${formatActivityTime(activity.timestamp)}</div>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        recentActivitiesElement.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-history"></i>
+                                <p>No recent activities</p>
+                            </div>
+                        `;
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error updating dashboard stats:', error);
+            }
+        }
+
+        // Helper function to get activity icon
+        function getActivityIcon(type) {
+            switch (type) {
+                case 'attendance':
+                    return 'clipboard-check';
+                case 'report':
+                    return 'chart-bar';
+                default:
+                    return 'bell';
+            }
+        }
+
+        // Helper function to format activity time
+        function formatActivityTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+            
+            if (diffInHours < 24) {
+                if (diffInHours < 1) {
+                    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+                    return `${diffInMinutes} minutes ago`;
+                }
+                return `${diffInHours} hours ago`;
+            }
+            
+            return date.toLocaleDateString('en-US', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+            });
+        }
+
+        // Add helper function to get year full name
+        function getYearFullName(year) {
+            const yearMap = {
+                'FY': 'First Year',
+                'SY': 'Second Year',
+                'TY': 'Third Year',
+                'BE': 'Final Year'
+            };
+            return yearMap[year] || year;
+        }
+
+        // Add function to update division visibility in reports
+        function updateReportDivisionVisibility() {
+            const departmentSelect = document.getElementById('reportDepartment');
+            const divisionGroup = document.getElementById('reportDivisionGroup');
+            
+            if (!departmentSelect || !divisionGroup) return;
+            
+            const selectedDepartment = departmentSelect.value;
+            
+            if (selectedDepartment === 'CT') {
+                divisionGroup.style.display = 'block';
+            } else {
+                divisionGroup.style.display = 'none';
+                const divisionSelect = document.getElementById('reportDivision');
+                if (divisionSelect) {
+                    divisionSelect.value = '';
+                }
+            }
+            
+            loadAttendanceReport();
+        }
+    </script>
+    
+    <!-- Firebase SDK Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
+    <!-- Firebase Configuration -->
+    <script src="firebase-config.js"></script>
+</body>
+</html> 
+
