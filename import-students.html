@@ -706,16 +706,15 @@
                     // Pre-check all emails in Auth
                     for (const student of studentsData) {
                         if (student.email) {
-    const normalizedEmail = student.email.trim().toLowerCase();
-    try {
-        const exists = await checkEmailExistsInAuth(normalizedEmail);
-        if (exists) {
-            authExistingEmails.add(normalizedEmail);
-        }
-    } catch (error) {
-        console.warn(`Pre-check failed for email ${normalizedEmail}:`, error);
-    }
-}
+                            try {
+                                const exists = await checkEmailExistsInAuth(student.email);
+                                if (exists) {
+                                    authExistingEmails.add(student.email.toLowerCase());
+                                }
+                            } catch (error) {
+                                console.warn(`Pre-check failed for email ${student.email}:`, error);
+                            }
+                        }
                     }
 
                     // Process students in batches
@@ -743,68 +742,49 @@
                                 }
 
                                 // Check if email exists
-                                const normalizedEmail = (student.email || '').trim().toLowerCase();
-if (existingEmails.has(normalizedEmail)) {
+                                if (existingEmails.has(student.email.toLowerCase())) {
                                     console.log(`Email ${student.email} already exists in database, skipping...`);
                                     errors.push(`Row ${i + index + 2}: Email ${student.email} already exists in the system`);
                                     totalSkipped++;
                                     return;
                                 }
 
-                                if (authExistingEmails.has(normalizedEmail)) {
+                                if (authExistingEmails.has(student.email.toLowerCase())) {
                                     console.log(`Email ${student.email} already exists in Auth, skipping...`);
                                     errors.push(`Row ${i + index + 2}: Email ${student.email} is already registered in authentication system`);
                                     totalSkipped++;
                                     return;
                                 }
 
-                                try {
-                                    // Generate a random password
-                                    const password = generatePassword();
+                                // Generate a random password
+                                const password = generatePassword();
 
-                                    // Create student using REST API
-                                    let uid = null;
-                                    try {
-                                        uid = await createStudentUser({
-                                            email: normalizedEmail,
-                                            password: password,
-                                            displayName: student.name
-                                        });
-                                    } catch (error) {
-                                        if (error.message && error.message.includes('EMAIL_EXISTS')) {
-                                            console.warn(`EMAIL_EXISTS at create for ${student.email}`);
-                                            errors.push(`Row ${i + index + 2}: Email ${student.email} already exists in Firebase Authentication (caught at create).`);
-                                            totalSkipped++;
-                                            return;
-                                        } else {
-                                            throw error;
-                                        }
-                                    }
+                                // Create student using REST API
+                                const uid = await createStudentUser({
+                                    email: student.email,
+                                    password: password,
+                                    displayName: student.name
+                                });
 
-                                    // Save student data
-                                    await db.ref('students').child(uid).set({
-                                        rollNo: student.rollNo,
-                                        name: student.name,
-                                        email: student.email,
-                                        phone: student.phone || '',
-                                        branch: student.branch,
-                                        year: student.year,
-                                        division: student.division || '',
-                                        createdAt: firebase.database.ServerValue.TIMESTAMP,
-                                        passwordResetSent: false
-                                    });
+                                // Save student data
+                                await db.ref('students').child(uid).set({
+                                    rollNo: student.rollNo,
+                                    name: student.name,
+                                    email: student.email,
+                                    phone: student.phone || '',
+                                    branch: student.branch,
+                                    year: student.year,
+                                    division: student.division || '',
+                                    createdAt: firebase.database.ServerValue.TIMESTAMP,
+                                    passwordResetSent: false
+                                });
 
-                                    // Add to tracking sets and arrays
-                                    existingEmails.add(normalizedEmail);
-                                    authExistingEmails.add(normalizedEmail);
-                                    newStudentEmails.push(normalizedEmail);
-                                    totalSuccess++;
+                                // Add to tracking sets and arrays
+                                existingEmails.add(student.email.toLowerCase());
+                                authExistingEmails.add(student.email.toLowerCase());
+                                newStudentEmails.push(student.email);
+                                totalSuccess++;
 
-                                } catch (error) {
-                                    console.error(`Error importing student ${student.email}:`, error);
-                                    errors.push(`Row ${i + index + 2}: ${error.message} (${student.email})`);
-                                    totalErrors++;
-                                }
                             } catch (error) {
                                 console.error(`Error importing student ${student.email}:`, error);
                                 errors.push(`Row ${i + index + 2}: ${error.message} (${student.email})`);
