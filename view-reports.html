@@ -727,10 +727,6 @@
                 <i class="fas fa-file-excel"></i>
                 Export to Excel
             </button>
-            <button onclick="exportToPDF()" class="btn btn-danger" style="margin-right: 10px;">
-                <i class="fas fa-file-pdf"></i>
-                Export to PDF
-            </button>
             <button onclick="confirmDeleteAllAttendance()" class="btn btn-danger">
                 <i class="fas fa-trash"></i>
                 Delete All Attendance
@@ -1180,23 +1176,23 @@
                 control.style.display = 'block';
             });
             
-            // Add admin badge to UI
-            const headerTitle = document.querySelector('h1');
-            if (headerTitle && !headerTitle.querySelector('.admin-badge')) {
-                const adminBadge = document.createElement('span');
-                adminBadge.className = 'admin-badge';
-                adminBadge.style.cssText = `
-                    background: #DC2626;
-                    color: white;
-                    padding: 4px 8px;
-                    border-radius: 4px;
-                    font-size: 0.8em;
-                    margin-left: 10px;
-                    font-weight: normal;
-                `;
-                adminBadge.textContent = 'ADMIN';
-                headerTitle.appendChild(adminBadge);
-            }
+            // Admin badge removed as per user request
+            // const headerTitle = document.querySelector('h1');
+            // if (headerTitle && !headerTitle.querySelector('.admin-badge')) {
+            //     const adminBadge = document.createElement('span');
+            //     adminBadge.className = 'admin-badge';
+            //     adminBadge.style.cssText = `
+            //         background: #DC2626;
+            //         color: white;
+            //         padding: 4px 8px;
+            //         border-radius: 4px;
+            //         font-size: 0.8em;
+            //         margin-left: 10px;
+            //         font-weight: normal;
+            //     `;
+            //     adminBadge.textContent = 'ADMIN';
+            //     headerTitle.appendChild(adminBadge);
+            // }
             
             console.log('Admin features enabled successfully');
         }
@@ -2677,61 +2673,8 @@
             XLSX.writeFile(wb, `Attendance_Report_${date}.xlsx`);
         }
 
-        function exportToPDF() {
-            const students = getCurrentFilteredData();
-            if (!students || students.length === 0) {
-                alert('No data to export');
-                return;
-            }
-
-            const doc = new jsPDF();
-            
-            // Add title
-            doc.setFontSize(16);
-            doc.text('Attendance Report', 14, 15);
-
-            // Add filters info
-            doc.setFontSize(10);
-            const department = document.getElementById('department').value || 'All';
-            const year = document.getElementById('year').value || 'All';
-            const filterValue = document.getElementById('percentageFilter').value;
-            const filterText = filterValue === 'custom' 
-                ? document.getElementById('customPercentage').value 
-                : filterValue;
-            
-            doc.text(`Department: ${department}`, 14, 25);
-            doc.text(`Year: ${year}`, 14, 30);
-            if (filterValue) {
-                doc.text(`Showing students below ${filterText}% attendance`, 14, 35);
-            }
-
-            // Add table
-            const headers = [['Roll No', 'Name', 'Department', 'Year', 'Subject',  'Present', 'Absent', 'Attendance %']];
-            const data = students.map(student => [
-                student.rollNo,
-                student.name,
-                student.department,
-                student.year,
-                student.subject,
-
-                student.present,
-                student.absent,
-                student.percentage.toFixed(1) + '%'
-            ]);
-
-            doc.autoTable({
-                startY: 40,
-                head: headers,
-                body: data,
-                theme: 'grid',
-                styles: { fontSize: 8 },
-                headStyles: { fillColor: [79, 70, 229] }
-            });
-
-            // Save PDF
-            const date = new Date().toLocaleDateString().replace(/\//g, '-');
-            doc.save(`Attendance_Report_${date}.pdf`);
-        }
+        // PDF export function removed as per user request
+        // function exportToPDF() { ... }
 
         function getCurrentFilteredData() {
             // Get the current filtered data from the table
