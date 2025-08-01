@@ -418,15 +418,20 @@ class TeacherList {
         
         // Filter and group teachers
         Object.entries(this.allTeachers).forEach(([id, teacher]) => {
+            // Get teacher's full name for search (with null checks)
+            const firstName = teacher.firstName || '';
+            const lastName = teacher.lastName || '';
+            const email = teacher.email || '';
+            const phone = String(teacher.phone || ''); // Convert to string to avoid includes error
+            const teacherFullName = `${firstName} ${lastName}`.trim();
+        
             // Check if teacher matches search term
             const matchesSearch = !searchTerm || 
-                teacher.firstName.toLowerCase().includes(searchTerm) ||
-                teacher.lastName.toLowerCase().includes(searchTerm) ||
-                teacher.email.toLowerCase().includes(searchTerm) ||
-                teacher.phone.includes(searchTerm);
-
-            // Get teacher's full name
-            const teacherFullName = `${teacher.firstName} ${teacher.lastName}`;
+                firstName.toLowerCase().includes(searchTerm) ||
+                lastName.toLowerCase().includes(searchTerm) ||
+                teacherFullName.toLowerCase().includes(searchTerm) ||
+                email.toLowerCase().includes(searchTerm) ||
+                phone.includes(searchTerm);
 
             // Get assigned departments for this teacher
             const assignedDepartments = teacherDepartments[teacherFullName] || [];
