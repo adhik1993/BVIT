@@ -1486,6 +1486,7 @@
 
                 // Convert teachers object to array and format for Excel
                 const teacherArray = Object.entries(teachers).map(([id, teacher]) => ({
+                    'Teacher ID': (teacher.teacherId && teacher.teacherId !== '') ? teacher.teacherId : id,
                     'First Name': teacher.firstName || '',
                     'Last Name': teacher.lastName || '',
                     'Email': teacher.email || '',
