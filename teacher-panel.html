@@ -141,9 +141,7 @@
             padding: 2rem;
         }
 
-        .header {
-            /* Default header styles remain here */
-        }
+
         /* Lab Assistant header highlight */
         .lab-assistant-header {
             background: #FFF7ED;
@@ -175,6 +173,8 @@
         .lab-assistant-header .page-title {
             color: #D97706;
         }
+        
+        .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -1520,128 +1520,183 @@
                 </div>
             `;
 
-            // Load total students count
+            // Load total students count based on teacher's assigned classes and departments
+            loadTotalStudentsCount();
+        }
+
+        // Function to load total students count for teacher's assigned classes
+        async function loadTotalStudentsCount() {
             const totalStudentsElement = document.getElementById('totalStudents');
-            if (totalStudentsElement) {
-                firebase.database().ref('students').once('value')
-                    .then((snapshot) => {
-                        let totalStudents = 0;
-                        const students = snapshot.val() || {};
+            if (!totalStudentsElement || !window.teacherData) return;
 
-                        // Get teacher's assigned classes
-                        const teacherClasses = teacherData.classes || [];
-                        console.log('Teacher Classes:', teacherClasses);
+            try {
+                const snapshot = await firebase.database().ref('students').once('value');
+                let totalStudents = 0;
+                const students = snapshot.val() || {};
 
-                        Object.values(students).forEach(student => {
-                            // Get student's class code
-                            const studentYear = (student.year || '').toString().toUpperCase();
-                            const studentDept = (student.department || student.branch || '').toString().toUpperCase();
-                            
-                            // Convert year format
-                            let yearCode = '';
-                            if (['FIRST', 'FIRST YEAR', '1'].includes(studentYear)) yearCode = 'FY';
-                            else if (['SECOND', 'SECOND YEAR', '2'].includes(studentYear)) yearCode = 'SY';
-                            else if (['THIRD', 'THIRD YEAR', '3'].includes(studentYear)) yearCode = 'TY';
-                            else if (['FOURTH', 'FOURTH YEAR', '4', 'BE'].includes(studentYear)) yearCode = 'BE';
-                            else yearCode = studentYear; // If already in correct format
+                // Get teacher's assigned data
+                const teacherClasses = window.teacherData.classes || [];
+                const teacherDepartments = window.teacherData.departments || [];
+                const teacherDivisions = window.teacherData.divisions || [];
+                
+                console.log('=== TEACHER DATA DEBUG ===');
+                console.log('Teacher Classes:', teacherClasses);
+                console.log('Teacher Departments:', teacherDepartments);
+                console.log('Teacher Divisions:', teacherDivisions);
+                console.log('Total students in database:', Object.keys(students).length);
+                console.log('=========================');
 
-                            // Check if student's year matches any of teacher's assigned years
-                            const isTeacherYear = teacherClasses.some(teacherClass => {
-                                // Teacher class might be just year (FY, SY, etc.) or full class code (FYME, SYME, etc.)
-                                if (teacherClass.length <= 2) {
-                                    // If teacher class is just year, match only the year part
-                                    return yearCode === teacherClass;
-                                } else {
-                                    // If teacher class is full code, match the year part
-                                    return yearCode === teacherClass.substring(0, 2);
-                                }
-                            });
+                Object.values(students).forEach(student => {
+                    // Get student details - use 'branch' field for department
+                    const studentYear = (student.year || '').toString().toUpperCase();
+                    const studentBranch = (student.branch || '').toString().toUpperCase();
+                    const studentDiv = (student.division || '').toString().toUpperCase();
+                    
+                    // Convert year to standard format
+                    let yearCode = '';
+                    if (['FIRST', 'FIRST YEAR', '1', 'FY'].includes(studentYear)) yearCode = 'FY';
+                    else if (['SECOND', 'SECOND YEAR', '2', 'SY'].includes(studentYear)) yearCode = 'SY';
+                    else if (['THIRD', 'THIRD YEAR', '3', 'TY'].includes(studentYear)) yearCode = 'TY';
+                    else if (['FOURTH', 'FOURTH YEAR', '4', 'BE'].includes(studentYear)) yearCode = 'BE';
+                    else yearCode = studentYear;
 
-                            // Count student if year matches
-                            if (isTeacherYear) {
-                                totalStudents++;
-                            }
+                    // Convert branch/department to standard codes
+                    let deptCode = '';
+                    if (['COMPUTER TECHNOLOGY', 'COMPUTER', 'CT'].includes(studentBranch)) deptCode = 'CT';
+                    else if (['INFORMATION TECHNOLOGY', 'IT'].includes(studentBranch)) deptCode = 'IT';
+                    else if (['MECHANICAL ENGINEERING', 'MECHANICAL', 'ME'].includes(studentBranch)) deptCode = 'ME';
+                    else if (['CIVIL ENGINEERING', 'CIVIL', 'CE'].includes(studentBranch)) deptCode = 'CE';
+                    else if (['ELECTRICAL ENGINEERING', 'ELECTRICAL', 'EE'].includes(studentBranch)) deptCode = 'EE';
+                    else if (['ELECTRONICS & TELECOMMUNICATION', 'ELECTRONICS', 'ET', 'E&TC'].includes(studentBranch)) deptCode = 'ET';
+                    else if (['ARTIFICIAL INTELLIGENCE', 'AI'].includes(studentBranch)) deptCode = 'AI';
+                    else deptCode = studentBranch;
+
+                    // Check if student matches teacher's assigned classes
+                    const matchesClass = teacherClasses.length === 0 || teacherClasses.includes(yearCode);
+                    
+                    // Check if student matches teacher's assigned departments
+                    const matchesDepartment = teacherDepartments.length === 0 || 
+                        teacherDepartments.some(dept => {
+                            const teacherDeptCode = typeof dept === 'object' ? dept.code : dept;
+                            return teacherDeptCode === deptCode;
                         });
+                    
+                    // Check if student matches teacher's assigned divisions (if teacher has divisions)
+                    const matchesDivision = teacherDivisions.length === 0 || 
+                        teacherDivisions.includes(studentDiv) ||
+                        studentDiv === '' || studentDiv === null;
 
-                        totalStudentsElement.textContent = totalStudents;
-                    })
-                    .catch((error) => {
-                        console.error('Error loading total students:', error);
-                        totalStudentsElement.textContent = 'Error';
-                    });
+                    // Count student if all criteria match
+                    if (matchesClass && matchesDepartment && matchesDivision) {
+                        totalStudents++;
+                        console.log('Matched student:', {
+                            name: student.name,
+                            rollNo: student.rollNo,
+                            year: yearCode,
+                            branch: studentBranch,
+                            dept: deptCode,
+                            div: studentDiv,
+                            teacherClasses: teacherClasses,
+                            teacherDepts: teacherDepartments
+                        });
+                    }
+                });
+
+                console.log('Total students for teacher:', totalStudents);
+                
+                // Fallback: If no students matched, show total students in database
+                if (totalStudents === 0 && Object.keys(students).length > 0) {
+                    console.log('No students matched criteria, showing total database count as fallback');
+                    totalStudents = Object.keys(students).length;
+                }
+                
+                totalStudentsElement.textContent = totalStudents;
+            } catch (error) {
+                console.error('Error loading total students:', error);
+                totalStudentsElement.textContent = 'Error';
             }
 
-            // Load today's attendance
+            // Load today's attendance for teacher's classes
+            loadTodayAttendance();
+
+            // Load average attendance for teacher's classes
+            loadAverageAttendance();
+        }
+
+        // Function to load today's attendance for teacher's assigned classes
+        async function loadTodayAttendance() {
             const todayAttendanceElement = document.getElementById('todayAttendance');
-            if (todayAttendanceElement) {
+            if (!todayAttendanceElement || !window.teacherData) return;
+
+            try {
                 const today = new Date().toISOString().split('T')[0];
-                firebase.database().ref('attendance')
-                    .orderByChild('date')
-                    .equalTo(today)
-                    .once('value')
-                    .then((snapshot) => {
-                        let totalPresent = 0;
-                        let totalStudents = 0;
-
-                        snapshot.forEach(record => {
-                            const data = record.val();
-                            if (data.teacherId === firebase.auth().currentUser.uid) {
-                                const students = data.students || {};
-                                totalStudents += Object.keys(students).length;
-                                totalPresent += Object.values(students).filter(status => status === true).length;
-                            }
-                        });
-
-                        const todayPercentage = totalStudents > 0 
-                            ? Math.round((totalPresent / totalStudents) * 100) 
-                            : 0;
-                        todayAttendanceElement.textContent = todayPercentage + '%';
-                    })
-                    .catch((error) => {
-                        console.error('Error loading today\'s attendance:', error);
-                        todayAttendanceElement.textContent = 'Error';
-                    });
-            }
-
-            // Load average attendance
-            const avgAttendanceElement = document.getElementById('avgAttendance');
-            if (avgAttendanceElement) {
-                const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
-
                 const currentUser = firebase.auth().currentUser;
-if (!currentUser) {
-    console.error('No user is logged in. Cannot calculate average attendance.');
-    avgAttendanceElement.textContent = 'Login required';
-    return;
-}
-firebase.database().ref('attendance')
-                    .orderByChild('date')
-                    .startAt(thirtyDaysAgoStr)
-                    .once('value')
-                    .then((snapshot) => {
-                        let totalPresent = 0;
-                        let totalStudents = 0;
+                if (!currentUser) {
+                    todayAttendanceElement.textContent = 'Login required';
+                    return;
+                }
 
-                        snapshot.forEach(record => {
-                            const data = record.val();
-                            if (data.teacherId === firebase.auth().currentUser.uid) {
-                                const students = data.students || {};
-                                totalStudents += Object.keys(students).length;
-                                totalPresent += Object.values(students).filter(status => status === true).length;
-                            }
-                        });
+                const snapshot = await firebase.database().ref('attendance').once('value');
+                let totalPresent = 0;
+                let totalStudents = 0;
 
-                        const avgPercentage = totalStudents > 0 
-                            ? Math.round((totalPresent / totalStudents) * 100) 
-                            : 0;
-                        avgAttendanceElement.textContent = avgPercentage + '%';
-                    })
-                    .catch((error) => {
-                        console.error('Error loading average attendance:', error);
-                        avgAttendanceElement.textContent = 'Error';
-                    });
+                const attendanceData = snapshot.val() || {};
+                Object.values(attendanceData).forEach(record => {
+                    // Check if record is for today and by current teacher
+                    if (record.date === today && record.teacherId === currentUser.uid) {
+                        const students = record.students || {};
+                        totalStudents += Object.keys(students).length;
+                        totalPresent += Object.values(students).filter(status => status === true || status === 'present').length;
+                    }
+                });
+
+                const todayPercentage = totalStudents > 0 
+                    ? Math.round((totalPresent / totalStudents) * 100) 
+                    : 0;
+                todayAttendanceElement.textContent = todayPercentage + '%';
+                console.log('Today attendance loaded:', { totalPresent, totalStudents, percentage: todayPercentage });
+            } catch (error) {
+                console.error('Error loading today\'s attendance:', error);
+                todayAttendanceElement.textContent = 'Error';
+            }
+        }
+
+        // Function to load average attendance for teacher's assigned classes
+        async function loadAverageAttendance() {
+            const avgAttendanceElement = document.getElementById('avgAttendance');
+            if (!avgAttendanceElement || !window.teacherData) return;
+
+            try {
+                const currentUser = firebase.auth().currentUser;
+                if (!currentUser) {
+                    avgAttendanceElement.textContent = 'Login required';
+                    return;
+                }
+
+                const snapshot = await firebase.database().ref('attendance').once('value');
+                let totalPresent = 0;
+                let totalStudents = 0;
+                let recordCount = 0;
+
+                const attendanceData = snapshot.val() || {};
+                Object.values(attendanceData).forEach(record => {
+                    // Check if record is by current teacher
+                    if (record.teacherId === currentUser.uid) {
+                        const students = record.students || {};
+                        totalStudents += Object.keys(students).length;
+                        totalPresent += Object.values(students).filter(status => status === true || status === 'present').length;
+                        recordCount++;
+                    }
+                });
+
+                const avgPercentage = totalStudents > 0 
+                    ? Math.round((totalPresent / totalStudents) * 100) 
+                    : 0;
+                avgAttendanceElement.textContent = avgPercentage + '%';
+                console.log('Average attendance loaded:', { totalPresent, totalStudents, recordCount, percentage: avgPercentage });
+            } catch (error) {
+                console.error('Error loading average attendance:', error);
+                avgAttendanceElement.textContent = 'Error';
             }
         }
 
