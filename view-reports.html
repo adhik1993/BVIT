@@ -778,8 +778,10 @@
                         <th>Year</th>
                         <th>Division</th>
                         <th>Subject</th>
-                        <th>Teacher</th>
-                                <th>Present</th>
+                        <th>Lecture Type</th>
+                        <th>Present</th>
+                        <th>Absent</th>
+                        <th>Percentage</th>
                                 <th>Absent</th>
                                 <th>Percentage</th>
                         <th>Status</th>
@@ -908,13 +910,43 @@
             
             const isAdminLoggedIn = sessionStorage.getItem('isAdminLoggedIn');
             const isTeacherLoggedIn = sessionStorage.getItem('isTeacherLoggedIn');
+            const userRole = sessionStorage.getItem('userRole');
+            const adminId = sessionStorage.getItem('adminId');
+            const teacherId = sessionStorage.getItem('teacherId');
             
-            console.log('Session storage:', { isAdminLoggedIn, isTeacherLoggedIn });
+            console.log('Session storage:', { 
+                isAdminLoggedIn, 
+                isTeacherLoggedIn, 
+                userRole, 
+                adminId, 
+                teacherId 
+            });
             
-            if (!isAdminLoggedIn && !isTeacherLoggedIn) {
+            // Enhanced admin detection
+            const isAdmin = isAdminLoggedIn === 'true' || userRole === 'admin' || adminId;
+            const isTeacher = isTeacherLoggedIn === 'true' || userRole === 'teacher' || teacherId;
+            
+            console.log('User permissions:', { isAdmin, isTeacher });
+            
+            // Store enhanced permissions globally
+            window.currentUserPermissions = {
+                isAdmin: isAdmin,
+                isTeacher: isTeacher,
+                canDelete: isAdmin,
+                canEdit: isAdmin || isTeacher,
+                canView: isAdmin || isTeacher
+            };
+            
+            if (!isAdmin && !isTeacher) {
                 console.log('No valid session found, redirecting to login');
                 window.location.href = 'login.html';
                 return;
+            }
+            
+            // Show admin-specific UI elements if user is admin
+            if (isAdmin) {
+                console.log('User has admin privileges');
+                showAdminFeatures();
             }
             
             // Check Firebase auth (with safety check) - but don't redirect if no user
@@ -977,8 +1009,260 @@
             console.log('loadReports() called');
         }
 
+        // Function to ensure current user's teacher name is properly set
+        function ensureCurrentUserTeacherName() {
+            console.log('Ensuring current user teacher name is set...');
+            
+            // Get current user info
+            const currentUserId = sessionStorage.getItem('teacherId');
+            const firebaseUserId = window.auth && window.auth.currentUser ? window.auth.currentUser.uid : null;
+            const currentUserEmail = window.auth && window.auth.currentUser ? window.auth.currentUser.email : null;
+            
+            console.log('Current user info:', { currentUserId, firebaseUserId, currentUserEmail });
+            
+            // Check if we already have a good teacher name
+            const existingName = sessionStorage.getItem('teacherName');
+            console.log('Existing teacher name in session:', existingName);
+            
+            // If we have "My Account" or similar generic names, replace them
+            if (!existingName || existingName === 'null' || existingName === 'My Account' || 
+                existingName === 'Teacher' || existingName === 'Unknown Teacher' || 
+                existingName === 'admin' || existingName === 'Admin' || existingName === 'ADMIN' || 
+                existingName.trim() === '') {
+                
+                console.log('Need to improve teacher name. Current name:', existingName);
+                
+                let betterName = null;
+                
+                // Try to get name from Firebase Auth
+                if (window.auth && window.auth.currentUser) {
+                    const user = window.auth.currentUser;
+                    console.log('Firebase user info:', { displayName: user.displayName, email: user.email });
+                    
+                    if (user.displayName && user.displayName.trim() !== '' && user.displayName !== 'My Account') {
+                        betterName = user.displayName.trim();
+                        console.log('Found better name from Firebase Auth displayName:', betterName);
+                    } else if (user.email) {
+                        // Extract name from email
+                        const emailName = user.email.split('@')[0].replace(/[._]/g, ' ');
+                        betterName = emailName.split(' ').map(word => 
+                            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                        ).join(' ');
+                        console.log('Generated name from email:', betterName);
+                    }
+                }
+                
+                // Try localStorage as backup
+                if (!betterName) {
+                    const localName = localStorage.getItem('teacherName');
+                    if (localName && localName !== 'null' && localName !== 'My Account' && localName.trim() !== '') {
+                        betterName = localName;
+                        console.log('Found name in localStorage:', betterName);
+                    }
+                }
+                
+                // Try userName from localStorage
+                if (!betterName) {
+                    const userName = localStorage.getItem('userName');
+                    if (userName && userName !== 'null' && userName !== 'My Account' && userName.trim() !== '') {
+                        betterName = userName;
+                        console.log('Found userName in localStorage:', betterName);
+                    }
+                }
+                
+                // If we found a better name, update everything
+                if (betterName && betterName !== 'My Account') {
+                    console.log('Updating teacher name to:', betterName);
+                    
+                    // Convert to uppercase if it looks like a full name
+                    if (betterName.split(' ').length >= 2) {
+                        betterName = betterName.toUpperCase();
+                    }
+                    
+                    // Update session storage
+                    sessionStorage.setItem('teacherName', betterName);
+                    
+                    // Update localStorage as backup
+                    localStorage.setItem('teacherName', betterName);
+                    
+                    // Update global mapping
+                    if (currentUserId && window.teacherIdToName) {
+                        window.teacherIdToName[currentUserId] = betterName;
+                        console.log('Updated global teacher mapping for current user');
+                    }
+                    
+                    // Try to create/update teacher record in Firebase
+                    if (currentUserId && window.db) {
+                        (async () => {
+                            try {
+                                const teacherRef = window.db.ref(`teachers/${currentUserId}`);
+                                const snapshot = await teacherRef.once('value');
+                                
+                                if (!snapshot.exists()) {
+                                    // Create new teacher record
+                                    const teacherData = {
+                                        name: betterName,
+                                        teacherId: currentUserId,
+                                        email: currentUserEmail || '',
+                                        addedAutomatically: true,
+                                        needsCompletion: true,
+                                        createdAt: new Date().toISOString()
+                                    };
+                                    
+                                    await teacherRef.set(teacherData);
+                                    console.log('Teacher record created successfully for:', betterName);
+                                    
+                                    // Show success notification
+                                    showNotification('Teacher Profile Updated', 
+                                        `Your name has been updated to "${betterName}". Your attendance records will now show your correct name.`, 
+                                        'success');
+                                } else {
+                                    // Update existing record if name is different
+                                    const existingData = snapshot.val();
+                                    if (!existingData.name || existingData.name === 'My Account' || 
+                                        existingData.name === 'admin' || existingData.name === 'Admin' || 
+                                        existingData.name === 'ADMIN' || existingData.name !== betterName) {
+                                        await teacherRef.update({ name: betterName });
+                                        console.log('Teacher record updated with new name:', betterName);
+                                        
+                                        showNotification('Teacher Name Updated', 
+                                            `Your name has been updated to "${betterName}".`, 
+                                            'success');
+                                    }
+                                }
+                                
+                                // Refresh reports to show updated name
+                                setTimeout(() => {
+                                    loadReports();
+                                }, 2000);
+                                
+                            } catch (error) {
+                                console.error('Error updating teacher record:', error);
+                            }
+                        })();
+                    }
+                } else {
+                    console.log('Could not find a better name, keeping current name');
+                }
+            } else {
+                console.log('Teacher name looks good:', existingName);
+            }
+        }
+        
+        // Function to find teacher name using comprehensive search
+        function findTeacherNameComprehensive(teacherId) {
+            // Try direct lookup in teachers node (window.allTeachersData)
+            if (window.allTeachersData && window.allTeachersData[teacherId]) {
+                const teacher = window.allTeachersData[teacherId];
+                if (teacher.firstName && teacher.lastName) {
+                    return teacher.firstName + ' ' + teacher.lastName;
+                } else if (teacher.name) {
+                    return teacher.name;
+                }
+            }
+            return null;
+        }
+
+        // Function to show admin-specific features
+        function showAdminFeatures() {
+            console.log('Showing admin features...');
+            
+            // Enable delete buttons and admin-only features
+            const deleteButtons = document.querySelectorAll('.admin-only, .delete-btn');
+            deleteButtons.forEach(btn => {
+                btn.style.display = 'block';
+                btn.disabled = false;
+            });
+            
+            // Show admin controls in the UI
+            const adminControls = document.querySelectorAll('.admin-controls');
+            adminControls.forEach(control => {
+                control.style.display = 'block';
+            });
+            
+            // Add admin badge to UI
+            const headerTitle = document.querySelector('h1');
+            if (headerTitle && !headerTitle.querySelector('.admin-badge')) {
+                const adminBadge = document.createElement('span');
+                adminBadge.className = 'admin-badge';
+                adminBadge.style.cssText = `
+                    background: #DC2626;
+                    color: white;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 0.8em;
+                    margin-left: 10px;
+                    font-weight: normal;
+                `;
+                adminBadge.textContent = 'ADMIN';
+                headerTitle.appendChild(adminBadge);
+            }
+            
+            console.log('Admin features enabled successfully');
+        }
+        
+        // Function to show notifications to user
+        function showNotification(title, message, type = 'info') {
+            const notification = document.createElement('div');
+            const bgColor = type === 'success' ? '#10B981' : type === 'error' ? '#EF4444' : '#4F46E5';
+            
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${bgColor};
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 10000;
+                max-width: 400px;
+                font-family: 'Segoe UI', sans-serif;
+                animation: slideIn 0.3s ease-out;
+            `;
+            
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+                    <div>
+                        <div style="font-weight: bold; margin-bottom: 4px;">${title}</div>
+                        <div style="font-size: 0.9em; opacity: 0.9;">${message}</div>
+                    </div>
+                    <button onclick="this.parentNode.parentNode.remove()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; margin-left: auto;">×</button>
+                </div>
+            `;
+            
+            // Add animation styles
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after 8 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.animation = 'slideIn 0.3s ease-out reverse';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }
+            }, 8000);
+        }
+        
         // Call checkAuth when page loads
-        window.onload = checkAuth;
+        window.onload = function() {
+            checkAuth();
+            // Set a delay to ensure Firebase Auth is ready, then ensure teacher name
+            setTimeout(ensureCurrentUserTeacherName, 1500);
+        };
 
         // Add this new function to handle division options
         function updateDivisionOptions() {
@@ -1009,12 +1293,40 @@
 
         // Global comprehensive teacher lookup function with enhanced fallback
         function getTeacherNameById(teacherId, teachersData, teacherNames) {
-            console.log('Looking up teacher:', teacherId);
-
-            // First check the mapping
-            if (teacherNames[teacherId]) {
+            // Try direct lookup in teachersData by UID
+            if (teachersData && teachersData[teacherId]) {
                 console.log('Found in mapping:', teacherNames[teacherId]);
                 return teacherNames[teacherId];
+            }
+
+            // 0. Check teacherUidToCode mapping (new method)
+            if (window.teacherUidToCode && window.teacherUidToCode[teacherId]) {
+                const teacherCode = window.teacherUidToCode[teacherId];
+                console.log('Found teacher code in UID mapping:', teacherCode);
+                
+                // Now look up the teacher by this code in teachersData
+                for (const [id, teacher] of Object.entries(teachersData)) {
+                    if (teacher.code && teacher.code.trim().toUpperCase() === teacherCode.trim().toUpperCase()) {
+                        let name = '';
+                        if (teacher.name && teacher.name.trim() !== '') {
+                            name = teacher.name.trim();
+                        } else if (teacher.firstName || teacher.lastName) {
+                            name = `${(teacher.firstName || '').trim()} ${(teacher.lastName || '').trim()}`.trim();
+                        } else if (teacher.displayName && teacher.displayName.trim() !== '') {
+                            name = teacher.displayName.trim();
+                        }
+                        if (name) {
+                            console.log('Resolved teacher name via UID mapping:', name);
+                            teacherNames[teacherId] = name;
+                            return name;
+                        }
+                    }
+                }
+                
+                // If we have the code but couldn't find the teacher, at least try to use the code
+                console.log('Could not find teacher data for code, using code as fallback:', teacherCode);
+                teacherNames[teacherId] = teacherCode;
+                return teacherCode;
             }
 
             // 1. Try direct UID lookup (object key)
@@ -1024,14 +1336,12 @@
                 if (teacher.name && teacher.name.trim() !== '') {
                     name = teacher.name.trim();
                 } else if (teacher.firstName || teacher.lastName) {
-                    name = `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim();
+                    name = `${(teacher.firstName || '').trim()} ${(teacher.lastName || '').trim()}`.trim();
                 } else if (teacher.displayName && teacher.displayName.trim() !== '') {
                     name = teacher.displayName.trim();
                 } else if (teacher.email) {
                     const emailName = teacher.email.split('@')[0].replace(/[._]/g, ' ');
-                    name = emailName.split(' ').map(word =>
-                        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-                    ).join(' ');
+                    name = emailName.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
                 }
                 if (name) {
                     teacherNames[teacherId] = name;
@@ -1047,14 +1357,12 @@
                     if (teacher.name && teacher.name.trim() !== '') {
                         name = teacher.name.trim();
                     } else if (teacher.firstName || teacher.lastName) {
-                        name = `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim();
+                        name = `${(teacher.firstName || '').trim()} ${(teacher.lastName || '').trim()}`.trim();
                     } else if (teacher.displayName && teacher.displayName.trim() !== '') {
                         name = teacher.displayName.trim();
                     } else if (teacher.email) {
                         const emailName = teacher.email.split('@')[0].replace(/[._]/g, ' ');
-                        name = emailName.split(' ').map(word =>
-                            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-                        ).join(' ');
+                        name = emailName.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
                     }
                     if (name) {
                         teacherNames[teacherId] = name;
@@ -1067,14 +1375,12 @@
                     if (teacher.name && teacher.name.trim() !== '') {
                         name = teacher.name.trim();
                     } else if (teacher.firstName || teacher.lastName) {
-                        name = `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim();
+                        name = `${(teacher.firstName || '').trim()} ${(teacher.lastName || '').trim()}`.trim();
                     } else if (teacher.displayName && teacher.displayName.trim() !== '') {
                         name = teacher.displayName.trim();
                     } else if (teacher.email) {
                         const emailName = teacher.email.split('@')[0].replace(/[._]/g, ' ');
-                        name = emailName.split(' ').map(word =>
-                            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-                        ).join(' ');
+                        name = emailName.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
                     }
                     if (name) {
                         teacherNames[teacherId] = name;
@@ -1087,14 +1393,12 @@
                     if (teacher.name && teacher.name.trim() !== '') {
                         name = teacher.name.trim();
                     } else if (teacher.firstName || teacher.lastName) {
-                        name = `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim();
+                        name = `${(teacher.firstName || '').trim()} ${(teacher.lastName || '').trim()}`.trim();
                     } else if (teacher.displayName && teacher.displayName.trim() !== '') {
                         name = teacher.displayName.trim();
                     } else if (teacher.email) {
                         const emailName = teacher.email.split('@')[0].replace(/[._]/g, ' ');
-                        name = emailName.split(' ').map(word =>
-                            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-                        ).join(' ');
+                        name = emailName.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
                     }
                     if (name) {
                         teacherNames[teacherId] = name;
@@ -1142,23 +1446,26 @@
 
             // Not found
             console.log('Teacher not found for ID:', teacherId);
-            return null;
+            return 'Teacher';
         }
 
         // Function to automatically add missing teacher record
         async function addMissingTeacherRecord(teacherId, teacherName) {
             try {
                 console.log('Adding missing teacher record:', { teacherId, teacherName });
-                
                 // Check if record already exists to avoid duplicates
                 const existingRecord = await window.db.ref(`teachers/${teacherId}`).once('value');
                 if (existingRecord.exists()) {
                     console.log('Teacher record already exists, skipping creation');
                     return true;
                 }
-                
+                // If teacherName is generic, set a placeholder
+                let finalName = teacherName;
+                if (!finalName || finalName.toLowerCase() === 'teacher' || finalName.toLowerCase() === 'admin') {
+                    finalName = 'Enter Name';
+                }
                 const teacherData = {
-                    name: teacherName,
+                    name: finalName,
                     teacherId: teacherId,
                     email: window.auth && window.auth.currentUser ? window.auth.currentUser.email : '',
                     departments: [],
@@ -1167,7 +1474,6 @@
                     addedAutomatically: true,
                     needsCompletion: true // Flag to indicate this record needs admin attention
                 };
-                
                 await window.db.ref(`teachers/${teacherId}`).set(teacherData);
                 console.log('Missing teacher record added successfully');
                 
@@ -1328,7 +1634,7 @@
                         if (teacher.name && teacher.name.trim() !== '') {
                             teacherName = teacher.name.trim();
                         } else if (teacher.firstName || teacher.lastName) {
-                            teacherName = `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim();
+                            teacherName = `${(teacher.firstName || '').trim()} ${(teacher.lastName || '').trim()}`.trim();
                         } else if (teacher.displayName && teacher.displayName.trim() !== '') {
                             teacherName = teacher.displayName.trim();
                         } else if (teacher.email) {
@@ -1589,22 +1895,42 @@
                     
                     // Method 9: Enhanced lookup with fallback mechanism
                     if (teacherName === 'Unknown Teacher' && record.teacherId) {
-                        const resolvedName = getTeacherNameById(record.teacherId, filters.teachersData, filters.teacherNames);
-                        if (resolvedName) {
-                            teacherName = resolvedName;
-                            console.log('Method 9 - Enhanced lookup resolved:', teacherName);
-                        } else {
-                            // If this is the current user's record and we still can't find them, try to add them
+                        // Try direct lookup in all teachers data
+                        if (window.allTeachersData && window.allTeachersData[record.teacherId]) {
+                            const teacher = window.allTeachersData[record.teacherId];
+                            if (teacher.name && teacher.name !== 'My Account' && teacher.name !== 'admin') {
+                                teacherName = teacher.name;
+                                console.log('Method 9a - Direct teacher data lookup:', teacherName);
+                            }
+                        }
+                        
+                        // If still unknown, try enhanced lookup
+                        if (teacherName === 'Unknown Teacher') {
+                            const resolvedName = getTeacherNameById ? getTeacherNameById(record.teacherId, filters.teachersData, filters.teacherNames) : null;
+                            if (resolvedName && resolvedName !== 'Unknown Teacher') {
+                                teacherName = resolvedName;
+                                console.log('Method 9b - Enhanced lookup resolved:', teacherName);
+                            }
+                        }
+                        
+                        // If this is the current user's record and we still can't find them
+                        if (teacherName === 'Unknown Teacher') {
                             const currentTeacherId = sessionStorage.getItem('teacherId');
-                            if (record.teacherId === currentTeacherId) {
-                                console.log('This is current user record, attempting to add missing teacher');
+                            const currentAdminId = sessionStorage.getItem('adminId');
+                            const currentFirebaseId = window.auth && window.auth.currentUser ? window.auth.currentUser.uid : null;
+                            
+                            if (record.teacherId === currentTeacherId || 
+                                record.teacherId === currentAdminId || 
+                                record.teacherId === currentFirebaseId) {
+                                console.log('This is current user record, attempting to resolve name');
                                 
                                 // Try to get name from Firebase Auth or session
                                 let fallbackName = null;
                                 
                                 // Check session storage first
                                 const sessionName = sessionStorage.getItem('teacherName');
-                                if (sessionName && sessionName !== 'null' && sessionName.trim() !== '') {
+                                if (sessionName && sessionName !== 'null' && sessionName !== 'admin' && 
+                                    sessionName !== 'Admin' && sessionName !== 'My Account' && sessionName.trim() !== '') {
                                     fallbackName = sessionName;
                                 }
                                 
@@ -1623,30 +1949,39 @@
                                 
                                 if (fallbackName) {
                                     teacherName = fallbackName;
-                                    console.log('Method 9 - Using fallback name:', teacherName);
-                                    
-                                    // Automatically add the missing teacher record (async, don't wait)
-                                    addMissingTeacherRecord(record.teacherId, fallbackName).then(success => {
-                                        if (success) {
-                                            // Update the local mapping immediately
-                                            filters.teacherNames[record.teacherId] = fallbackName;
-                                            filters.teachersData[record.teacherId] = {
-                                                name: fallbackName,
-                                                teacherId: record.teacherId,
-                                                addedAutomatically: true
-                                            };
-                                            console.log('Teacher mapping updated locally');
-                                        }
-                                    }).catch(error => {
+                                    // Always update the mapping immediately, regardless of DB write
+                                    filters.teacherNames[record.teacherId] = fallbackName;
+                                    filters.teachersData[record.teacherId] = {
+                                        name: fallbackName,
+                                        teacherId: record.teacherId,
+                                        addedAutomatically: true
+                                    };
+                                    console.log('Method 9c - Current user fallback name:', fallbackName);
+                                    // Attempt to add to DB asynchronously, but don't block UI
+                                    addMissingTeacherRecord(record.teacherId, fallbackName).catch(error => {
                                         console.error('Failed to add missing teacher record:', error);
                                     });
                                 } else {
-                                    teacherName = 'Current User';
-                                    console.log('Method 9 - Fallback to Current User');
+                                    // Try one more time with comprehensive search
+                                    const comprehensiveName = findTeacherNameComprehensive(record.teacherId);
+                                    if (comprehensiveName) {
+                                        teacherName = comprehensiveName;
+                                        console.log('Method 9d - Comprehensive search found:', comprehensiveName);
+                                    } else {
+                                        teacherName = 'Current User';
+                                        console.log('Method 9e - Fallback to Current User');
+                                    }
                                 }
                             } else {
-                                teacherName = 'Unknown Teacher';
-                                console.log('Method 9 - Fallback to Unknown Teacher');
+                                // Try comprehensive search for any unknown teacher
+                                const comprehensiveName = findTeacherNameComprehensive(record.teacherId);
+                                if (comprehensiveName) {
+                                    teacherName = comprehensiveName;
+                                    console.log('Method 9f - Comprehensive search found:', comprehensiveName);
+                                } else {
+                                    teacherName = 'Unknown Teacher';
+                                    console.log('Method 9g - Fallback to Unknown Teacher');
+                                }
                             }
                         }
                     }
@@ -1664,6 +1999,38 @@
                                 }
                             }
                         }
+                    }
+                    
+                    // जर teacherName UIDसारखा किंवा 'Unknown Teacher' असेल, तर fallback वापरा
+                    if (
+                        !teacherName ||
+                        teacherName === 'Unknown Teacher' ||
+                        (teacherName.length > 20 && /^[A-Za-z0-9]{20,}$/.test(teacherName))
+                    ) {
+                        // fallbackName मिळवा (session/Firebase Auth)
+                        let fallbackName = null;
+                        const sessionName = sessionStorage.getItem('teacherName');
+                        if (sessionName && sessionName !== 'null' && sessionName.trim() !== '' && sessionName.toLowerCase() !== 'admin') {
+                            fallbackName = sessionName;
+                        } else if (window.auth && window.auth.currentUser) {
+                            const user = window.auth.currentUser;
+                            if (user.displayName && user.displayName.trim() !== '' && user.displayName.toLowerCase() !== 'admin') {
+                                fallbackName = user.displayName.trim();
+                            } else if (user.email) {
+                                const emailName = user.email.split('@')[0].replace(/[._]/g, ' ');
+                                if (emailName.toLowerCase() !== 'admin') {
+                                    fallbackName = emailName.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+                                }
+                            }
+                        }
+                        teacherName = fallbackName || 'Teacher';
+                        filters.teacherNames[record.teacherId] = teacherName;
+                        filters.teachersData[record.teacherId] = {
+                            name: teacherName,
+                            teacherId: record.teacherId,
+                            addedAutomatically: true
+                        };
+                        console.warn('Fallback teacher name वापरला:', teacherName);
                     }
                     
                     console.log('Teacher name resolution for record:', {
@@ -1766,9 +2133,12 @@
 
                             filteredStudents++;
 
-                            // Initialize student record if not exists
-                            if (!studentAttendance[studentId]) {
-                                studentAttendance[studentId] = {
+                            // Create unique key for student-subject combination
+                            const studentSubjectKey = `${studentId}_${record.subject || 'unknown'}`;
+                            
+                            // Initialize student-subject record if not exists
+                            if (!studentAttendance[studentSubjectKey]) {
+                                studentAttendance[studentSubjectKey] = {
                                     id: studentId,
                                     name: student.name || `${student.firstName || ''} ${student.lastName || ''}`.trim(),
                                     rollNo: student.rollNo,
@@ -1777,15 +2147,71 @@
                                     year: studentYear,
                                     division: studentDivision,
                                     subject: record.subject || '-',
-                                    teacherName: teacherName,
+                                    lectureType: record.lectureType || 'theory',
+                                    teacherName: (function() {
+                                        // Always try to get the best possible teacher name
+                                        let bestName = null;
+                                        
+                                        // Priority 1: Direct teacher name from record
+                                        if (teacherName && 
+                                            teacherName !== 'Unknown Teacher' && 
+                                            teacherName !== 'My Account' && 
+                                            teacherName !== 'Teacher' && 
+                                            teacherName !== 'admin' && 
+                                            teacherName !== 'Admin' && 
+                                            teacherName !== 'ADMIN' && 
+                                            !(teacherName.length > 20 && /^[A-Za-z0-9]{20,}$/.test(teacherName))) {
+                                            bestName = teacherName;
+                                        }
+                                        
+                                        // Priority 2: Session storage
+                                        if (!bestName) {
+                                            const sessionName = sessionStorage.getItem('teacherName');
+                                            if (sessionName && sessionName !== 'null' && sessionName !== 'My Account' && sessionName.trim() !== '') {
+                                                bestName = sessionName;
+                                            }
+                                        }
+                                        
+                                        // Priority 3: Firebase Auth current user
+                                        if (!bestName && window.auth && window.auth.currentUser) {
+                                            const user = window.auth.currentUser;
+                                            if (user.displayName && user.displayName.trim() !== '' && user.displayName !== 'My Account') {
+                                                bestName = user.displayName.trim();
+                                            } else if (user.email) {
+                                                const emailName = user.email.split('@')[0].replace(/[._]/g, ' ');
+                                                bestName = emailName.split(' ').map(word => 
+                                                    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                                                ).join(' ');
+                                            }
+                                        }
+                                        
+                                        // Priority 4: Try record fields
+                                        if (!bestName) {
+                                            if (record.createdBy && record.createdBy !== 'Unknown Teacher' && record.createdBy.trim() !== '') {
+                                                bestName = record.createdBy;
+                                            } else if (record.teacherId && record.teacherId.includes('@')) {
+                                                const emailName = record.teacherId.split('@')[0].replace(/[._]/g, ' ');
+                                                bestName = emailName.split(' ').map(word => 
+                                                    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                                                ).join(' ');
+                                            }
+                                        }
+                                        
+                                        // Final result
+                                        if (bestName && bestName.split(' ').length >= 2) {
+                                            return bestName.toUpperCase();
+                                        }
+                                        return bestName || 'CURRENT TEACHER';
+                                    })(),
                                     teacherId: record.teacherId || '-',
                                     present: 0,
                                     absent: 0,
                                     total: 0,
                                     dates: {}
                                 };
-                                console.log('Added student:', {
-                                    name: studentAttendance[studentId].name,
+                                console.log('Added student-subject:', {
+                                    name: studentAttendance[studentSubjectKey].name,
+                                    subject: record.subject,
                                     department: studentDepartmentCode,
                                     year: studentYear,
                                     division: studentDivision
@@ -1820,15 +2246,57 @@
 
                 if ((!start || recordDate >= start) && (!end || recordDate <= end)) {
                     Object.entries(record.students).forEach(([studentId, status]) => {
-                        if (studentAttendance[studentId]) {
-                            studentAttendance[studentId].total++;
-                            if (status === true || status === 'present') {
-                                studentAttendance[studentId].present++;
-                            } else {
-                                studentAttendance[studentId].absent++;
+                        const studentSubjectKey = `${studentId}_${record.subject || 'unknown'}`;
+                        if (studentAttendance[studentSubjectKey]) {
+                            studentAttendance[studentSubjectKey].total++;
+                            
+                            // Enhanced status checking to handle all possible formats
+                            // Debug: Log status values to identify patterns
+                            if (Math.random() < 0.01) { // Log 1% of records to avoid spam
+                                console.log('Attendance status debug:', {
+                                    studentId,
+                                    status,
+                                    statusType: typeof status,
+                                    statusValue: JSON.stringify(status),
+                                    date: record.date,
+                                    subject: record.subject
+                                });
                             }
-                            studentAttendance[studentId].dates[record.date] = status;
-                            studentAttendance[studentId].subject = record.subject || studentAttendance[studentId].subject;
+                            
+                            // Handle null/undefined values
+                            if (status === null || status === undefined) {
+                                console.warn('Null/undefined attendance status found:', {
+                                    studentId,
+                                    date: record.date,
+                                    subject: record.subject
+                                });
+                                // Skip this record or treat as absent
+                                studentAttendance[studentSubjectKey].absent++;
+                                studentAttendance[studentSubjectKey].dates[record.date] = 'absent';
+                                return;
+                            }
+                            
+                            const isPresent = (
+                                status === true || 
+                                status === 'true' ||
+                                status === 'present' || 
+                                status === 'Present' || 
+                                status === 'PRESENT' ||
+                                status === 'P' ||
+                                status === 'p' ||
+                                status === 1 ||
+                                status === '1' ||
+                                (typeof status === 'string' && status.toLowerCase().trim() === 'present')
+                            );
+                            
+                            if (isPresent) {
+                                studentAttendance[studentSubjectKey].present++;
+                            } else {
+                                studentAttendance[studentSubjectKey].absent++;
+                            }
+                            
+                            studentAttendance[studentSubjectKey].dates[record.date] = status;
+                            // Subject is already set during initialization
                         }
                     });
                 }
@@ -1841,6 +2309,23 @@
                     ...student,
                     percentage
                 };
+            });
+            
+            // Debug: Log attendance summary
+            console.log('Attendance processing summary:', {
+                totalStudentRecords: students.length,
+                studentsWithAttendance: students.filter(s => s.total > 0).length,
+                studentsWithoutAttendance: students.filter(s => s.total === 0).length,
+                totalPresentRecords: students.reduce((sum, s) => sum + s.present, 0),
+                totalAbsentRecords: students.reduce((sum, s) => sum + s.absent, 0),
+                totalRecords: students.reduce((sum, s) => sum + s.total, 0),
+                sampleStudents: students.slice(0, 3).map(s => ({
+                    name: s.name,
+                    present: s.present,
+                    absent: s.absent,
+                    total: s.total,
+                    percentage: s.percentage.toFixed(1)
+                }))
             });
 
             // Apply percentage filter if selected
@@ -2036,7 +2521,7 @@
             if (students.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="12" class="text-center" style="padding: 40px;">
+                        <td colspan="13" class="text-center" style="padding: 40px;">
                             <i class="fas fa-folder-open" style="font-size: 48px; color: #9CA3AF; margin-bottom: 16px;"></i>
                             <p style="color: #4B5563; font-size: 1.1rem; font-weight: 500;">No attendance records found</p>
                             <p style="color: #6B7280; font-size: 0.95rem;">Try changing the filters or selecting a different date range</p>
@@ -2108,14 +2593,7 @@
                         <td>${student.year || '-'}</td>
                         <td>${student.division || '-'}</td>
                         <td>${student.subject || '-'}</td>
-                        <td>${(() => {
-    let displayName = student.teacherName;
-    // If missing, or looks like a Firebase UID, or is 'Unknown Teacher', return 'Unknown Teacher'
-    if (!displayName || displayName === 'Unknown Teacher' || (displayName.length > 20 && /^[A-Za-z0-9]{20,}$/.test(displayName))) {
-        return 'Unknown Teacher';
-    }
-    return displayName;
-})()}</td>
+                        <td><span style="background: ${student.lectureType === 'practical' ? '#e3f2fd' : '#f3e5f5'}; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; color: ${student.lectureType === 'practical' ? '#1565c0' : '#7b1fa2'};">${student.lectureType || 'Theory'}</span></td>
                         <td>
                             <span class="attendance-count present" title="${presentPercentage}% Present">
                                 <i class="fas fa-check"></i>
@@ -2228,14 +2706,14 @@
             }
 
             // Add table
-            const headers = [['Roll No', 'Name', 'Department', 'Year', 'Subject', 'Teacher', 'Present', 'Absent', 'Attendance %']];
+            const headers = [['Roll No', 'Name', 'Department', 'Year', 'Subject',  'Present', 'Absent', 'Attendance %']];
             const data = students.map(student => [
                 student.rollNo,
                 student.name,
                 student.department,
                 student.year,
                 student.subject,
-                student.teacherName,
+
                 student.present,
                 student.absent,
                 student.percentage.toFixed(1) + '%'
@@ -2454,7 +2932,31 @@
             if (event.target == modal) {
                 closeDeleteModal();
             }
-        }
+        };
+
+        // Initialize teacher UID to code mapping
+        (async function() {
+            try {
+                // Wait for Firebase to be ready
+                if (typeof window.waitForFirebase === 'function') {
+                    await window.waitForFirebase();
+                }
+                
+                // Check if db is available
+                if (window.db && typeof window.db.ref === 'function') {
+                    const teacherUidToCodeSnap = await window.db.ref('teacherUidToCode').once('value');
+                    window.teacherUidToCode = teacherUidToCodeSnap.exists() ? teacherUidToCodeSnap.val() : {};
+                    console.log('Teacher UID to Code mapping loaded:', Object.keys(window.teacherUidToCode).length, 'entries');
+                    console.log('Sample mapping entries:', Object.entries(window.teacherUidToCode).slice(0, 3));
+                } else {
+                    console.warn('Firebase database not available, using empty teacher UID mapping');
+                    window.teacherUidToCode = {};
+                }
+            } catch (error) {
+                console.error('Error loading teacher UID to code mapping:', error);
+                window.teacherUidToCode = {};
+            }
+        })();
     </script>
 
     <!-- Add required libraries for export -->
