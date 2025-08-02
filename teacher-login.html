@@ -380,6 +380,12 @@
             const teacherId = document.getElementById('teacherId').value;
             const password = document.getElementById('teacherPassword').value;
             
+            const loginBtn = document.querySelector('.btn-login');
+            if (loginBtn) {
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+            }
+
             try {
                 // Wait for Firebase to be ready
                 if (typeof window.waitForFirebase === 'function') {
@@ -432,6 +438,11 @@ setupActivityListeners('teacher');
             } catch (error) {
                 console.error('Login error:', error);
                 alert('Login failed: ' + error.message);
+            } finally {
+                if (loginBtn) {
+                    loginBtn.disabled = false;
+                    loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login as Teacher';
+                }
             }
         }
 

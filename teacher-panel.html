@@ -358,12 +358,28 @@
 
         /* Error Message */
         .error-message {
-            background: var(--danger);
-            color: white;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-            display: none;
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fff0f0;
+            color: #d32f2f;
+            border: 1px solid #d32f2f;
+            padding: 12px 28px;
+            border-radius: 6px;
+            font-size: 16px;
+            z-index: 9999;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px) translateX(-50%); }
+            to { opacity: 1; transform: translateY(0) translateX(-50%); }
         }
 
         /* Responsive Design */
@@ -1239,6 +1255,141 @@
                 max-width: 100%;
             }
         }
+        /* Modern Report Tab Styles */
+        .reports-container {
+            background: linear-gradient(135deg, #f8fafc 60%, #e0e7ff 100%);
+            border-radius: 18px;
+            box-shadow: 0 6px 32px rgba(80, 80, 120, 0.10);
+            padding: 32px 24px 32px 24px;
+            margin-bottom: 32px;
+        }
+        .report-summary-bar {
+            display: flex;
+            gap: 32px;
+            margin-bottom: 18px;
+            justify-content: flex-start;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .report-summary-item {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(80,80,120,0.07);
+            padding: 16px 28px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #4F46E5;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .report-summary-item i {
+            font-size: 22px;
+            color: #10B981;
+        }
+        .report-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 20px;
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 4px 24px rgba(80, 80, 120, 0.08);
+            overflow: hidden;
+        }
+        .report-table th,
+        .report-table td {
+            padding: 14px 12px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .report-table th {
+            background: #f5f7fa;
+            color: #4F46E5;
+            font-weight: 700;
+            font-size: 15px;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .report-table tr:nth-child(even) {
+            background: #fafbfc;
+        }
+        .report-table tr:hover {
+            background: #e0e7ff;
+            transition: background 0.2s;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            background: #f3f4f6;
+        }
+        .status-badge.good {
+            background: linear-gradient(90deg, #e6fbe8 60%, #d1fae5 100%);
+            color: #059669;
+            border: 1px solid #bbf7d0;
+        }
+        .status-badge.low {
+            background: linear-gradient(90deg, #fef2f2 60%, #fee2e2 100%);
+            color: #d32f2f;
+            border: 1px solid #fecaca;
+        }
+        .percentage-bar {
+            position: relative;
+            width: 100%;
+            height: 18px;
+            background: #f3f4f6;
+            border-radius: 9px;
+            overflow: hidden;
+            margin-top: 2px;
+        }
+        .percentage-bar .bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #4F46E5 60%, #10B981 100%);
+            border-radius: 9px;
+            transition: width 0.3s;
+        }
+        .percentage-bar span {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #222;
+            font-weight: 600;
+            font-size: 12px;
+            text-shadow: 0 0 2px #fff;
+        }
+        .attendance-count {
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .attendance-count.present i {
+            color: #059669;
+        }
+        .attendance-count.absent i {
+            color: #d32f2f;
+        }
+        @media (max-width: 700px) {
+            .report-table th, .report-table td {
+                padding: 10px 6px;
+                font-size: 12px;
+            }
+            .status-badge {
+                font-size: 11px;
+                padding: 3px 8px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1246,9 +1397,6 @@
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
                 </div>
-
-    <!-- Error Message -->
-    <div class="error-message" id="errorMessage"></div>
 
     <!-- Sidebar -->
     <aside class="sidebar">
@@ -1338,7 +1486,7 @@
         <div class="quick-actions">
             <div class="action-card" onclick="handleNavigation('take-attendance.html')">
                 <i class="fas fa-clipboard-check action-icon"></i>
-                <div class="action-title">Take Attendance</div>
+                <div class="action-title">Fill Attendance</div>
     </div>
             <div class="action-card" onclick="handleNavigation('view-reports.html')">
                 <i class="fas fa-chart-bar action-icon"></i>
@@ -1511,7 +1659,7 @@
                 <div class="quick-actions">
                     <div class="action-card" onclick="window.location.hash='take-attendance'">
                         <i class="fas fa-clipboard-check action-icon"></i>
-                        <div class="action-title">Take Attendance</div>
+                        <div class="action-title">Fill Attendance</div>
                     </div>
                     <div class="action-card" onclick="window.location.hash='view-reports'">
                         <i class="fas fa-chart-bar action-icon"></i>
@@ -1749,8 +1897,8 @@
             });
 
             if (unmarkedCount > 0) {
-                const proceed = confirm(`${unmarkedCount} students are not marked. Do you want to proceed?`);
-                if (!proceed) return;
+                showErrorMessage('<i class="fas fa-exclamation-circle"></i> Please mark all students before submitting!');
+                return;
             }
 
             // Show loading state
@@ -1762,7 +1910,7 @@
             try {
             // Generate class code and attendance key
             const classCode = year + department + (division ? '-' + division : '');
-            const attendanceKey = `${selectedDate}_${classCode}_${selectedLectureType}_${subject}`;
+            const attendanceKey = `${selectedDate}_${classCode}_${selectedLectureType}_${subject}_${teacherId}`;
             
             // Update attendance in Firebase
                 await window.db.ref('attendance/' + attendanceKey).update({
@@ -1910,8 +2058,8 @@ Thank you for marking attendance!
 
         // Function to check if department has divisions
         function departmentHasDivisions(department) {
-            // Only CT and IT departments have divisions
-            return ['CT', 'IT'].includes(department);
+            // Only CT department has divisions
+            return ['CT'].includes(department);
         }
 
         // Function to update division visibility
@@ -1952,7 +2100,7 @@ Thank you for marking attendance!
                 console.log('No departments assigned to teacher');
                 mainContent.innerHTML = `
                     <div class="header">
-                        <h1 class="page-title">Take Attendance</h1>
+                        <h1 class="page-title">Fill Attendance</h1>
                     </div>
                     <div class="empty-state">
                         <i class="fas fa-exclamation-circle"></i>
@@ -1966,7 +2114,7 @@ Thank you for marking attendance!
             console.log('Rendering attendance form');
             mainContent.innerHTML = `
                 <div class="header">
-                    <h1 class="page-title">Take Attendance</h1>
+                    <h1 class="page-title">Fill Attendance</h1>
                 </div>
 
                 <div class="attendance-container">
@@ -2009,7 +2157,7 @@ Thank you for marking attendance!
                                 <i class="fas fa-book"></i>
                                 Subject
                             </label>
-                            <input type="text" id="subject" placeholder="Enter subject name" required>
+                            <input type="text" id="subject" placeholder="Enter subject name" required oninput="this.value = this.value.toUpperCase()">
                         </div>
 
                         <div class="form-group">
@@ -2325,6 +2473,7 @@ Thank you for marking attendance!
                 snapshot.forEach(record => {
                     const data = record.val();
                     if (!data) return;
+                    if (data.teacherId !== teacherId) return;
 
                     console.log('Processing record:', data);
 
@@ -2495,6 +2644,18 @@ Thank you for marking attendance!
                         </tbody>
                     </table>
                 `;
+
+                let avgAttendance = 0;
+                if (records.length > 0) {
+                    avgAttendance = Math.round(records.reduce((sum, r) => sum + r.percentage, 0) / records.length);
+                }
+                const summaryBar = `
+                    <div class="report-summary-bar">
+                        <div class="report-summary-item"><i class="fas fa-list"></i> Total Records: <span>${records.length}</span></div>
+                        <div class="report-summary-item"><i class="fas fa-percentage"></i> Avg. Attendance: <span>${avgAttendance}%</span></div>
+                    </div>
+                `;
+                html = summaryBar + html;
 
                 reportContent.innerHTML = html;
 
@@ -3033,13 +3194,18 @@ Thank you for marking attendance!
             }
 
             const classCode = year + department + (division ? '-' + division : '');
-            const attendanceKey = `${selectedDate}_${classCode}_${selectedLectureType}_${subject}`;
+            const attendanceKey = `${selectedDate}_${classCode}_${selectedLectureType}_${subject}_${teacherId}`;
             
             updateAttendance(studentId, attendanceKey, isPresent);
         }
 
         // Update mark all functions
         function markAllPresent() {
+            const teacherId = firebase.auth().currentUser?.uid;
+            if (!teacherId) {
+                showErrorMessage('Please login again');
+                return;
+            }
             const rows = document.querySelectorAll('tr[data-student-id]');
             const promises = [];
             
@@ -3066,7 +3232,7 @@ Thank you for marking attendance!
                 }
 
                 const classCode = year + department + (division ? '-' + division : '');
-                const attendanceKey = `${selectedDate}_${classCode}_${selectedLectureType}_${subject}`;
+                const attendanceKey = `${selectedDate}_${classCode}_${selectedLectureType}_${subject}_${teacherId}`;
                 
                 // Add promise to array
                 promises.push(updateAttendance(studentId, attendanceKey, true));
@@ -3084,6 +3250,11 @@ Thank you for marking attendance!
         }
 
         function markAllAbsent() {
+            const teacherId = firebase.auth().currentUser?.uid;
+            if (!teacherId) {
+                showErrorMessage('Please login again');
+                return;
+            }
             const rows = document.querySelectorAll('tr[data-student-id]');
             const promises = [];
             
@@ -3110,7 +3281,7 @@ Thank you for marking attendance!
                 }
 
                 const classCode = year + department + (division ? '-' + division : '');
-                const attendanceKey = `${selectedDate}_${classCode}_${selectedLectureType}_${subject}`;
+                const attendanceKey = `${selectedDate}_${classCode}_${selectedLectureType}_${subject}_${teacherId}`;
                 
                 // Add promise to array
                 promises.push(updateAttendance(studentId, attendanceKey, false));
