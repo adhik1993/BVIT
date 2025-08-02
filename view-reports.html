@@ -631,6 +631,150 @@
                 gap: 4px;
             }
         }
+
+        /* Edit Attendance Modal Styles */
+        .student-info {
+            background: var(--bg-light);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .student-info p {
+            margin: 5px 0;
+            font-size: 0.95rem;
+        }
+
+        .attendance-edit {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .attendance-edit .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .attendance-edit label {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .attendance-edit input {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .attendance-preview {
+            background: #e8f5e8;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid var(--secondary);
+        }
+
+        .attendance-preview p {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+
+        #newPercentage {
+            color: var(--secondary);
+            font-weight: bold;
+        }
+
+        /* Attendance Records Styles */
+        .attendance-records h4 {
+            margin: 15px 0 10px 0;
+            color: var(--text-dark);
+            font-size: 1.1rem;
+        }
+
+        .attendance-record {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            background: var(--bg-light);
+            border-radius: 8px;
+            border-left: 4px solid #e5e7eb;
+        }
+
+        .record-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .record-date {
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 0.95rem;
+        }
+
+        .record-subject {
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        .record-type {
+            color: var(--primary);
+            font-size: 0.8rem;
+            background: #e0e7ff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .status-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-btn.present {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .status-btn.present:hover {
+            background: #bbf7d0;
+        }
+
+        .status-btn.absent {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .status-btn.absent:hover {
+            background: #fecaca;
+        }
+
+        .attendance-summary {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .attendance-summary p {
+            margin: 0;
+            font-size: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -778,9 +922,8 @@
                         <th>Present</th>
                         <th>Absent</th>
                         <th>Percentage</th>
-                                <th>Absent</th>
-                                <th>Percentage</th>
                         <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="attendanceTableBody">
@@ -2517,7 +2660,7 @@
             if (students.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="13" class="text-center" style="padding: 40px;">
+                        <td colspan="12" class="text-center" style="padding: 40px;">
                             <i class="fas fa-folder-open" style="font-size: 48px; color: #9CA3AF; margin-bottom: 16px;"></i>
                             <p style="color: #4B5563; font-size: 1.1rem; font-weight: 500;">No attendance records found</p>
                             <p style="color: #6B7280; font-size: 0.95rem;">Try changing the filters or selecting a different date range</p>
@@ -2617,6 +2760,11 @@
                                 <i class="fas ${percentage >= 75 ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
                                 ${statusText}
                             </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="editStudent('${student.id}')" title="Edit Student">
+                                <i class="fas fa-edit"></i>
+                            </button>
                         </td>
                     </tr>
                 `;
@@ -2900,6 +3048,148 @@
                 window.teacherUidToCode = {};
             }
         })();
+
+        // Function to edit student attendance - Simple version
+        function editStudent(studentId) {
+            console.log('Edit button clicked for student ID:', studentId);
+            console.log('Current filtered students:', currentFilteredStudents);
+            
+            // Find the student data from current filtered students
+            let student = currentFilteredStudents.find(s => s.id === studentId);
+            
+            // If not found by id, try to find by other fields
+            if (!student) {
+                student = currentFilteredStudents.find(s => 
+                    s.rollNo === studentId || 
+                    s.name === studentId ||
+                    JSON.stringify(s).includes(studentId)
+                );
+            }
+            
+            if (!student) {
+                alert('Student not found. ID: ' + studentId);
+                console.error('Student not found with ID:', studentId);
+                return;
+            }
+
+            console.log('Found student:', student);
+
+            // Simple prompt to change present/absent counts
+            const currentPresent = student.present || 0;
+            const currentAbsent = student.absent || 0;
+            const total = currentPresent + currentAbsent;
+            
+            if (total === 0) {
+                alert('This student has no attendance records to edit.');
+                return;
+            }
+            
+            const newPresent = prompt(`Student: ${student.name} (${student.rollNo})\n\nCurrent: ${currentPresent} Present, ${currentAbsent} Absent\nTotal Lectures: ${total}\n\nEnter new Present count (0-${total}):`, currentPresent);
+            
+            if (newPresent === null) return; // User cancelled
+            
+            const presentCount = parseInt(newPresent);
+            if (isNaN(presentCount) || presentCount < 0 || presentCount > total) {
+                alert('Invalid number. Please enter a number between 0 and ' + total);
+                return;
+            }
+            
+            const absentCount = total - presentCount;
+            
+            // Update the student data
+            updateStudentAttendance(student, presentCount, absentCount);
+        }
+
+        // Function to update student attendance - Simple version
+        async function updateStudentAttendance(student, newPresent, newAbsent) {
+            try {
+                console.log('Updating attendance for student:', student);
+                console.log('New values - Present:', newPresent, 'Absent:', newAbsent);
+                
+                // Wait for Firebase to be ready
+                await waitForFirebase();
+                
+                // Try to update the student data directly in the processed data structure
+                // This is a simpler approach that works with the current data
+                
+                // Update the student object in currentFilteredStudents immediately
+                const studentIndex = currentFilteredStudents.findIndex(s => 
+                    s.rollNo === student.rollNo && s.name === student.name
+                );
+                
+                if (studentIndex !== -1) {
+                    currentFilteredStudents[studentIndex].present = newPresent;
+                    currentFilteredStudents[studentIndex].absent = newAbsent;
+                    currentFilteredStudents[studentIndex].total = newPresent + newAbsent;
+                    
+                    console.log('Updated student data:', currentFilteredStudents[studentIndex]);
+                    
+                    // Immediately update the table display
+                    updateTable(currentFilteredStudents);
+                    
+                    console.log('Table updated with new data');
+                } else {
+                    console.log('Student not found in currentFilteredStudents for immediate update');
+                }
+                
+                // Also try to find and update in Firebase
+                const attendanceRef = window.firebase.database().ref('attendance');
+                const snapshot = await attendanceRef.once('value');
+                const allAttendance = snapshot.val() || {};
+                
+                console.log('Searching in', Object.keys(allAttendance).length, 'attendance records');
+                
+                // Find matching records (there might be multiple)
+                const matchingKeys = [];
+                Object.keys(allAttendance).forEach(key => {
+                    const record = allAttendance[key];
+                    if (record.rollNo === student.rollNo || 
+                        (record.name === student.name && record.department === student.department)) {
+                        matchingKeys.push(key);
+                        console.log('Found matching record:', key, record);
+                    }
+                });
+                
+                if (matchingKeys.length > 0) {
+                    // Update all matching records
+                    const updates = {};
+                    matchingKeys.forEach(key => {
+                        updates[`attendance/${key}/present`] = newPresent;
+                        updates[`attendance/${key}/absent`] = newAbsent;
+                        updates[`attendance/${key}/total`] = newPresent + newAbsent;
+                        updates[`attendance/${key}/lastModified`] = new Date().toISOString();
+                    });
+                    
+                    await window.firebase.database().ref().update(updates);
+                    console.log('Updated', matchingKeys.length, 'records in Firebase');
+                } else {
+                    console.log('No matching records found in Firebase, creating new record');
+                    // Create new record
+                    await attendanceRef.push({
+                        rollNo: student.rollNo,
+                        name: student.name,
+                        department: student.department || student.departmentName,
+                        year: student.year,
+                        division: student.division,
+                        present: newPresent,
+                        absent: newAbsent,
+                        total: newPresent + newAbsent,
+                        lastModified: new Date().toISOString(),
+                        createdBy: 'edit_function'
+                    });
+                }
+                
+                alert(`Attendance updated successfully!\n\nStudent: ${student.name}\nNew Present: ${newPresent}\nNew Absent: ${newAbsent}\n\nTable has been updated with new values.`);
+                
+                // Table is already updated immediately above, no need to reload
+                
+            } catch (error) {
+                console.error('Error updating attendance:', error);
+                alert('Error updating attendance: ' + error.message);
+            }
+        }
+
+        // Simple edit functionality complete - no complex functions needed
     </script>
 
     <!-- Add required libraries for export -->
