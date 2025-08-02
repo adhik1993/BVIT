@@ -869,7 +869,7 @@ async initialize() {
         const isAdmin = await checkIsAdmin(user.uid);
         if (!isAdmin) {
             console.error('User is not admin');
-            window.location.href = 'login.html';
+            window.location.href = 'admin-login.html';
             return;
         }
         console.log('Admin verified');
