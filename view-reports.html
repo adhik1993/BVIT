@@ -822,7 +822,7 @@
                 </div>
                 <div class="form-group">
                     <label for="subject">Subject</label>
-                    <input type="text" id="subject" placeholder="Enter subject name">
+                    <input type="text" id="subject" placeholder="Enter subject name" oninput="this.value = this.value.toUpperCase()">
                 </div>
                 <div class="form-group">
                     <label for="startDate">From Date</label>
@@ -919,9 +919,7 @@
                         <th>Division</th>
                         <th>Subject</th>
                         <th>Lecture Type</th>
-                        <th>Present</th>
-                        <th>Absent</th>
-                        <th>Percentage</th>
+                        <th>Attendance Status</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -2660,7 +2658,7 @@
             if (students.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="12" class="text-center" style="padding: 40px;">
+                        <td colspan="10" class="text-center" style="padding: 40px;">
                             <i class="fas fa-folder-open" style="font-size: 48px; color: #9CA3AF; margin-bottom: 16px;"></i>
                             <p style="color: #4B5563; font-size: 1.1rem; font-weight: 500;">No attendance records found</p>
                             <p style="color: #6B7280; font-size: 0.95rem;">Try changing the filters or selecting a different date range</p>
@@ -2734,26 +2732,10 @@
                         <td>${student.subject || '-'}</td>
                         <td><span style="background: ${student.lectureType === 'practical' ? '#e3f2fd' : '#f3e5f5'}; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; color: ${student.lectureType === 'practical' ? '#1565c0' : '#7b1fa2'};">${student.lectureType || 'Theory'}</span></td>
                         <td>
-                            <span class="attendance-count present" title="${presentPercentage}% Present">
-                                <i class="fas fa-check"></i>
-                                ${student.present}/${totalLectures}
-                                <small style="color: #047857">(${presentPercentage}%)</small>
+                            <span class="attendance-status" style="padding: 6px 12px; border-radius: 6px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; ${student.present > student.absent ? 'background: #dcfce7; color: #166534;' : 'background: #fef2f2; color: #dc2626;'}">
+                                <i class="fas ${student.present > student.absent ? 'fa-check' : 'fa-times'}"></i>
+                                ${student.present > student.absent ? 'Present' : 'Absent'}
                             </span>
-                        </td>
-                        <td>
-                            <span class="attendance-count absent" title="${absentPercentage}% Absent">
-                                <i class="fas fa-times"></i>
-                                ${student.absent}/${totalLectures}
-                                <small style="color: #DC2626">(${absentPercentage}%)</small>
-                            </span>
-                        </td>
-                        <td class="attendance-percentage">
-                            <div style="display: flex; flex-direction: column; align-items: center;">
-                                <div style="font-size: 1.1em; font-weight: bold;">${percentage}%</div>
-                                <div style="font-size: 0.9em; color: #666;">
-                                    ${student.present}/${totalLectures} lectures
-                                </div>
-                            </div>
                         </td>
                         <td>
                             <span class="status-badge ${statusClass}">
@@ -2779,29 +2761,61 @@
         }
 
         function exportToExcel() {
+            console.log('🔥 Export button clicked!');
             const students = getCurrentFilteredData();
+            console.log('📊 Students data:', students);
+            
             if (!students || students.length === 0) {
-                alert('No data to export');
+                console.log('❌ No students data found');
+                alert('No data to export. Please load reports first!');
                 return;
             }
+            
+            console.log('✅ Found', students.length, 'students to export');
+            
+            // Check if XLSX is available
+            if (typeof XLSX === 'undefined') {
+                console.error('❌ XLSX library not loaded!');
+                alert('Export library not loaded. Please refresh the page.');
+                return;
+            }
+            
+            console.log('✅ XLSX library is available');
+            
+            try {
 
             // Create workbook
             const wb = XLSX.utils.book_new();
             
             // Prepare data for export
-            const exportData = students.map(student => ({
-                'Roll No': student.rollNo,
-                'Name': student.name,
-                'Department': student.department,
-                'Year': student.year,
-                'Division': student.division,
-                'Subject': student.subject,
-                'Teacher': student.teacherName,
-                'Present': student.present,
-                'Absent': student.absent,
-                'Total': student.total,
-                'Attendance %': student.percentage.toFixed(1) + '%'
-            }));
+            const exportData = students.map(student => {
+                // Get full department name
+                const fullDeptName = getDepartmentFullName(student.department) || student.departmentName || student.department || '';
+                
+                // Calculate percentage if we have present/absent data
+                let attendancePercentage = '';
+                if (student.present !== undefined && student.absent !== undefined) {
+                    const total = student.present + student.absent;
+                    if (total > 0) {
+                        attendancePercentage = ((student.present / total) * 100).toFixed(1) + '%';
+                    }
+                } else if (student.total && student.present !== undefined) {
+                    attendancePercentage = ((student.present / student.total) * 100).toFixed(1) + '%';
+                }
+                
+                return {
+                    'Roll No': student.rollNo || '',
+                    'Name': student.name || '',
+                    'Department': fullDeptName,
+                    'Year': student.year || '',
+                    'Division': student.division || '',
+                    'Subject': student.subject || '',
+                    'Lecture Type': student.lectureType || '',
+                    'Teacher': student.teacherName || student.teacher || '',
+                    'Attendance Status': student.attendanceStatus || (student.present > student.absent ? 'Present' : 'Absent'),
+                    'Attendance %': attendancePercentage
+                };
+            });
 
             // Create worksheet
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -2818,15 +2832,40 @@
 
             // Generate Excel file
             const date = new Date().toLocaleDateString().replace(/\//g, '-');
-            XLSX.writeFile(wb, `Attendance_Report_${date}.xlsx`);
+            const filename = `Attendance_Report_${date}.xlsx`;
+            console.log('📁 Generating file:', filename);
+            
+            XLSX.writeFile(wb, filename);
+            console.log('✅ Export completed successfully!');
+            alert('Report exported successfully!');
+            
+            } catch (error) {
+                console.error('❌ Export failed:', error);
+                alert('Export failed: ' + error.message);
+            }
         }
 
         // PDF export function removed as per user request
         // function exportToPDF() { ... }
 
         function getCurrentFilteredData() {
-            // Get the current filtered data from the table
+            console.log('📊 Getting current filtered data...');
+            
+            // Use the stored currentFilteredStudents array instead of parsing table
+            if (currentFilteredStudents && currentFilteredStudents.length > 0) {
+                console.log('✅ Using stored filtered students:', currentFilteredStudents.length);
+                return currentFilteredStudents;
+            }
+            
+            console.log('⚠️ No stored data, trying to parse table...');
+            
+            // Fallback: Get the current filtered data from the table
             const tableBody = document.getElementById('attendanceTableBody');
+            if (!tableBody) {
+                console.log('❌ Table body not found');
+                return [];
+            }
+            
             const rows = tableBody.getElementsByTagName('tr');
             const students = [];
             
@@ -2834,32 +2873,39 @@
                 const cells = row.getElementsByTagName('td');
                 if (cells.length === 0) continue; // Skip if no cells (like in loading/error state)
                 
-                // Get text content of cells
-                const rollNo = cells[1].textContent.trim();
-                const name = cells[2].textContent.trim();
-                const department = cells[3].textContent.trim();
-                const year = cells[4].textContent.trim();
-                const division = cells[5].textContent.trim();
-                const subject = cells[6].textContent.trim();
-                const teacherName = cells[7].textContent.trim();
-                const present = parseInt(cells[8].textContent.match(/\d+/)[0]);
-                const absent = parseInt(cells[9].textContent.match(/\d+/)[0]);
-                const percentage = parseFloat(cells[10].textContent);
-                
-                students.push({
-                    id: cells[0].querySelector('.student-checkbox').value, // Use the checkbox value as the ID
-                    rollNo,
-                    name,
-                    department,
-                    year,
-                    division,
-                    subject,
-                    teacherName,
-                    present,
-                    absent,
-                    total: present + absent,
-                    percentage
-                });
+                try {
+                    // Get text content of cells (updated for new table structure)
+                    const rollNo = cells[1] ? cells[1].textContent.trim() : '';
+                    const name = cells[2] ? cells[2].textContent.trim() : '';
+                    const department = cells[3] ? cells[3].textContent.trim() : '';
+                    const year = cells[4] ? cells[4].textContent.trim() : '';
+                    const division = cells[5] ? cells[5].textContent.trim() : '';
+                    const subject = cells[6] ? cells[6].textContent.trim() : '';
+                    const lectureType = cells[7] ? cells[7].textContent.trim() : '';
+                    const attendanceStatus = cells[8] ? cells[8].textContent.trim() : '';
+                    
+                    // Extract checkbox value for ID
+                    const checkbox = cells[0] ? cells[0].querySelector('.student-checkbox') : null;
+                    const id = checkbox ? checkbox.value : `${rollNo}_${name}`;
+                    
+                    students.push({
+                        id,
+                        rollNo,
+                        name,
+                        department,
+                        year,
+                        division,
+                        subject,
+                        lectureType,
+                        attendanceStatus,
+                        // For export compatibility
+                        present: attendanceStatus.includes('Present') ? 1 : 0,
+                        absent: attendanceStatus.includes('Absent') ? 1 : 0
+                    });
+                } catch (error) {
+                    console.error('Error parsing row:', error);
+                    continue;
+                }
             }
             
             return students;
