@@ -907,6 +907,15 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label for="batch">Batch</label>
+                    <select id="batch">
+                        <option value="">All Batches</option>
+                        <option value="A">Batch A</option>
+                        <option value="B">Batch B</option>
+                        <option value="C">Batch C</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="subject">Subject</label>
                     <input type="text" id="subject" placeholder="Enter subject name" oninput="this.value = this.value.toUpperCase()">
                 </div>
@@ -1205,6 +1214,10 @@
             document.getElementById('year').addEventListener('change', loadReports);
             document.getElementById('division').addEventListener('change', loadReports);
             document.getElementById('lectureType').addEventListener('change', loadReports);
+            document.getElementById('batch').addEventListener('change', function() {
+                console.log('Batch changed to:', this.value);
+                loadReports();
+            });
             document.getElementById('startDate').addEventListener('change', loadReports);
             document.getElementById('endDate').addEventListener('change', loadReports);
             document.getElementById('percentageFilter').addEventListener('change', loadReports);
@@ -1955,6 +1968,7 @@
                     year: document.getElementById('year').value,
                     division: document.getElementById('division').value,
                     lectureType: document.getElementById('lectureType').value,
+                    batch: document.getElementById('batch').value,
                     subject: document.getElementById('subject').value,
                     startDate: document.getElementById('startDate').value,
                     endDate: document.getElementById('endDate').value,
@@ -2138,6 +2152,7 @@ function updateTable(students) {
                 <td>${record.division || '-'}</td>
                 <td>${record.subject || '-'}</td>
                 <td class="${record.lectureType === 'practical' ? 'text-danger' : 'text-success'}">${record.lectureType || 'theory'}</td>
+                <td class="${record.lectureType === 'practical' ? 'text-info' : 'text-muted'}">${record.lectureType === 'practical' ? (record.batch || 'A') : '-'}</td>
                 <td>${record.date || '-'}</td>
                 <td class="${record.statusClass} ${record.status === 'Present' ? 'status-present' : 'status-absent'}" style="font-weight: bold;">${record.status || '-'}</td>
                 <td class="${record.statusClass} ${record.status === 'Present' ? 'status-present' : 'status-absent'}" style="font-weight: bold;">${record.attendancePercentage}%</td>
@@ -2302,6 +2317,36 @@ async function processAttendanceData(attendanceData, studentsData, filters) {
                 // Apply division filter
                 if (filters.division && finalDivision !== filters.division) return;
                 
+                // Extract batch information for practical lectures
+                let batchInfo = '';
+                if (record.lectureType === 'practical') {
+                    if (record.batch) {
+                        batchInfo = record.batch;
+                    } else if (record.class && record.class.includes('Batch')) {
+                        const batchMatch = record.class.match(/Batch([ABC])/i);
+                        batchInfo = batchMatch ? batchMatch[1].toUpperCase() : '';
+                    } else {
+                        // Determine batch from student roll number (basic logic)
+                        const rollNum = parseInt((student.rollNo || student.rollNumber || '').replace(/[^0-9]/g, '')) || 0;
+                        if (rollNum >= 1 && rollNum <= 20) batchInfo = 'A';
+                        else if (rollNum >= 21 && rollNum <= 40) batchInfo = 'B';
+                        else if (rollNum >= 41) batchInfo = 'C';
+                        else batchInfo = 'A'; // Default fallback
+                    }
+                }
+
+                // Apply batch filter for practical lectures
+                if (filters.batch && filters.batch.trim() !== '' && filters.batch !== 'all') {
+                    if (record.lectureType === 'practical') {
+                        // For practical lectures, check if batch matches
+                        if (batchInfo !== filters.batch.toUpperCase()) {
+                            console.log('⏭️ Skipping practical record - batch filter mismatch:', batchInfo, 'vs', filters.batch);
+                            return;
+                        }
+                    }
+                    // For theory lectures, we don't filter by batch (they don't have batches)
+                }
+
                 // Create detailed record for each student
                 detailedRecords.push({
                     id: `${recordKey}_${studentId}`,
@@ -2312,12 +2357,14 @@ async function processAttendanceData(attendanceData, studentsData, filters) {
                     division: finalDivision,
                     subject: record.subject,
                     lectureType: record.lectureType || 'theory',
+                    batch: batchInfo,
                     date: record.date,
                     status: isPresent ? 'Present' : 'Absent',
                     statusClass: isPresent ? 'text-success' : 'text-danger',
                     attendancePercentage: isPresent ? 100 : 0,
                     recordKey: recordKey,
-                    studentId: studentId
+                    studentId: studentId,
+                    studentName: student.name || student.firstName || '-'
                 });
             });
         });
@@ -2603,6 +2650,7 @@ async function processAttendanceData(attendanceData, studentsData, filters) {
                 <th>Division</th>
                 <th>Subject</th>
                 <th>Lecture Type</th>
+                <th>Batch</th>
                 <th>Date Taken</th>
                 <th>Status</th>
                 <th>Attendance %</th>
@@ -2620,8 +2668,11 @@ async function processAttendanceData(attendanceData, studentsData, filters) {
                         <th>Year</th>
                         <th>Division</th>
                         <th>Subject</th>
-                        <th>Present</th>
-                        <th>Absent</th>
+                        <th>Lecture Type</th>
+                        <th>Batch</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Attendance %</th>
                         <th>Actions</th>
                     </tr>
                 `;
