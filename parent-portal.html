@@ -639,9 +639,7 @@
                             <th>Date</th>
                             <th>Subject</th>
                             <th>Lecture Type</th>
-                            <th>Teacher</th>
                             <th>Status</th>
-                            <th>Time</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -663,11 +661,9 @@
                         <td>${new Date(record.date).toLocaleDateString('en-IN')}</td>
                         <td><strong>${record.subject}</strong></td>
                         <td><span style="background: #e3f2fd; padding: 4px 8px; border-radius: 4px; font-size: 0.85em;">${record.lectureType || 'N/A'}</span></td>
-                        <td>${record.teacher && record.teacher !== 'N/A' ? record.teacher : 'Teacher'}</td>
                         <td class="${statusClass}">
                             <i class="fas ${statusIcon}"></i> ${record.status.charAt(0).toUpperCase() + record.status.slice(1)}
                         </td>
-                        <td>${record.time && record.time !== 'N/A' && !isNaN(new Date(record.time)) ? new Date(record.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Not Available'}</td>
                     </tr>
                 `;
             });

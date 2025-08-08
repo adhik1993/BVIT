@@ -3384,9 +3384,15 @@
             // Clear current options except the first one
             batchSelect.innerHTML = '<option value="">-- Select Batch --</option>';
             
-            // Check if ME (Mechanical Engineering) - any year
+            // Check if ME (Mechanical Engineering) - handle FY first, then other years
             if (selectedDepartment === 'ME') {
-                if (selectedYear === 'SY') {
+                if (selectedYear === 'FY') {
+                    console.log('✅ ME FY detected - Showing Batch A, B, and C with proper split ranges');
+                    // ME FY: Split students properly - no large ranges in single batch
+                    batchSelect.innerHTML += '<option value="BatchA">Batch A (1801-1820)</option>';
+                    batchSelect.innerHTML += '<option value="BatchB">Batch B (1821-1840)</option>';
+                    batchSelect.innerHTML += '<option value="BatchC">Batch C (1841-1861)</option>';
+                } else if (selectedYear === 'SY') {
                     console.log('🚫 ME SY detected - Only showing Batch A and B (no Batch C)');
                     // ME SY: Batch A (1-22), Batch B (23+)
                     batchSelect.innerHTML += '<option value="BatchA">Batch A (1-22 students)</option>';
@@ -3402,10 +3408,10 @@
                     batchSelect.innerHTML += '<option value="BatchA">Batch A (20 students)</option>';
                     batchSelect.innerHTML += '<option value="BatchB">Batch B (20 students)</option>';
                 }
-            } else if (department === 'CE' && year === 'SY') {
+            } else if (selectedDepartment === 'CE' && selectedYear === 'SY') {
                 console.log('🚫 CE SY detected - Only showing Batch A and B (no Batch C)');
-                batchSelect.innerHTML += '<option value="BatchA">Batch A (1-22, 27)</option>';
-                batchSelect.innerHTML += '<option value="BatchB">Batch B (23-26, 28-43)</option>';
+                batchSelect.innerHTML += '<option value="BatchA">Batch A (2001-2022, 2027)</option>';
+                batchSelect.innerHTML += '<option value="BatchB">Batch B (2023-2026, 2028-2043)</option>';
             } else if (department === 'IT' && year === 'FY') {
                 console.log('🎯 IT FY detected - Custom batch ranges');
                 batchSelect.innerHTML += '<option value="BatchA">Batch A (1-20 students)</option>';
@@ -3439,6 +3445,11 @@
                 console.log('🚫 EE TY detected - Only showing Batch A and B (no Batch C)');
                 batchSelect.innerHTML += '<option value="BatchA">Batch A (1-23 students)</option>';
                 batchSelect.innerHTML += '<option value="BatchB">Batch B (24 onwards)</option>';
+            } else if (selectedDepartment === 'AI' && selectedYear === 'FY') {
+                console.log('🎯 AI FY detected - Custom batch ranges');
+                batchSelect.innerHTML += '<option value="BatchA">Batch A (1001-1022)</option>';
+                batchSelect.innerHTML += '<option value="BatchB">Batch B (1023-1044)</option>';
+                batchSelect.innerHTML += '<option value="BatchC">Batch C (1045-1063)</option>';
             } else {
                 console.log('✅ Standard batches - Showing Batch A, B, and C');
                 // Show all batches for other departments/years
@@ -4952,17 +4963,23 @@
                 let batchStudents;
                 
                 if (department === 'CE' && year === 'SY') {
+                    // 🎯 CE SY roll-based slicing: A = 2001-2022 + 2027, B = 2023-2026 + 2028-2043 (skip 2027), no C
+                    const toNum = (s) => parseInt(String((s.rollNo || '')).replace(/\D/g, '')) || 0;
                     if (batchLetter === 'A') {
-                        // Batch A: 1-22 (0-21) and 27 (index 26)
-                        batchStudents = allStudents.slice(0, 22).concat(allStudents.slice(26, 27));
+                        batchStudents = allStudents.filter(s => {
+                            const r = toNum(s);
+                            return (r >= 2001 && r <= 2022) || r === 2027;
+                        });
+                        console.log('🎯 CE SY Batch A: Rolls 2001-2022, 2027 loaded');
                     } else if (batchLetter === 'B') {
-                        // Batch B: 23-26 (22-25), 28-43 (27-43), and add 26 (index 25), remove 27 (index 26)
-                        batchStudents = allStudents.slice(22, 26) // 23-26
-                            .concat(allStudents.slice(27, 43))    // 28-43
-                            .concat(allStudents.slice(25, 26));   // add 26
+                        batchStudents = allStudents.filter(s => {
+                            const r = toNum(s);
+                            return (r >= 2023 && r <= 2026) || (r >= 2028 && r <= 2043);
+                        });
+                        console.log('🎯 CE SY Batch B: Rolls 2023-2026, 2028-2043 loaded (skip 2027)');
                     } else {
-                        // Default fallback
-                        batchStudents = allStudents.slice(0, 22).concat(allStudents.slice(26, 27));
+                        batchStudents = [];
+                        console.log('🚫 CE SY: No Batch C available');
                     }
                 } else if (department === 'ET' && year === 'FY') {
                     // ET FY: A(1-20), B(21-40), C(41+)
@@ -5042,6 +5059,67 @@
                     } else {
                         batchStudents = allStudents.slice(0, 23);
                     }
+                } else if (department === 'AI' && year === 'FY') {
+                    // 🎯 AI FY roll-based slicing: A = 1001-1022, B = 1023-1044, C = 1045-1063
+                    const toNum = (s) => parseInt(String((s.rollNo || '')).replace(/\D/g, '')) || 0;
+                    if (batchLetter === 'A') {
+                        batchStudents = allStudents.filter(s => {
+                            const r = toNum(s);
+                            return r >= 1001 && r <= 1022;
+                        });
+                        console.log('🎯 AI FY Batch A: Rolls 1001-1022 loaded');
+                    } else if (batchLetter === 'B') {
+                        batchStudents = allStudents.filter(s => {
+                            const r = toNum(s);
+                            return r >= 1023 && r <= 1044;
+                        });
+                        console.log('🎯 AI FY Batch B: Rolls 1023-1044 loaded');
+                    } else if (batchLetter === 'C') {
+                        batchStudents = allStudents.filter(s => {
+                            const r = toNum(s);
+                            return r >= 1045 && r <= 1063;
+                        });
+                        console.log('🎯 AI FY Batch C: Rolls 1045-1063 loaded');
+                    } else {
+                        batchStudents = [];
+                        console.log('🚫 AI FY: Invalid batch selected');
+                    }
+                } else if (department === 'ME' && year === 'FY') {
+                    // ME FY roll-based slicing: A = 1801-1820, B = 1821-1840, C = 1841-1861
+                    const toNum = (s) => parseInt(String((s.rollNo || '')).replace(/\D/g, '')) || 0;
+                    
+                    // Debug: Show first 5 student roll numbers
+                    console.log('ME FY Debug - First 5 student rolls:', allStudents.slice(0, 5).map(s => ({
+                        name: s.name,
+                        rollNo: s.rollNo,
+                        extracted: toNum(s)
+                    })));
+                    
+                    if (batchLetter === 'A') {
+                        batchStudents = allStudents.filter(s => {
+                            const r = toNum(s);
+                            return r >= 1801 && r <= 1820;
+                        });
+                        console.log('ME FY Batch A: Rolls 1801-1820 loaded, found:', batchStudents.length);
+                    } else if (batchLetter === 'B') {
+                        batchStudents = allStudents.filter(s => {
+                            const r = toNum(s);
+                            return r >= 1821 && r <= 1840;
+                        });
+                        console.log('ME FY Batch B: Rolls 1821-1840 loaded, found:', batchStudents.length);
+                        if (batchStudents.length === 0) {
+                            console.log('ME FY Batch B Debug - All roll numbers:', allStudents.map(s => toNum(s)).sort((a,b) => a-b));
+                        }
+                    } else if (batchLetter === 'C') {
+                        batchStudents = allStudents.filter(s => {
+                            const r = toNum(s);
+                            return r >= 1841 && r <= 1861;
+                        });
+                        console.log('ME FY Batch C: Rolls 1841-1861 loaded, found:', batchStudents.length);
+                    } else {
+                        batchStudents = [];
+                        console.log('ME FY: Invalid batch selected');
+                    }
                 } else if (department === 'CE' && year === 'TY') {
                     // 🎯 CE TY Special handling: Only Batch A with roll 3001-3026
                     if (batchLetter === 'A') {
@@ -5079,6 +5157,10 @@
                     console.log(`🎯 IT SY - Batch ${batchLetter}: Students ${startIndex + 1} to ${endIndex} (${batchStudents.length} students loaded)`);
                 } else if (department === 'IT' && year === 'TY') {
                     console.log(`🎯 IT TY - Batch ${batchLetter}: Students ${startIndex + 1} to ${endIndex} (${batchStudents.length} students loaded)`);
+                } else if (department === 'AI' && year === 'FY') {
+                    console.log(`🎯 AI FY - Batch ${batchLetter}: Roll-based filtering (${batchStudents.length} students loaded)`);
+                } else if (department === 'ME' && year === 'FY') {
+                    console.log(`ME FY - Batch ${batchLetter}: Roll-based filtering (${batchStudents.length} students loaded)`);
                 } else {
                     console.log(`📚 ${department} ${year} - Batch ${batchLetter}: Students ${startIndex + 1} to ${endIndex} (${batchStudents.length} students loaded)`);
                 }
