@@ -1,27 +1,30 @@
 <!DOCTYPE html>
 <script>
-// Global Firebase Offline Fallback (must be first)
+// Force Firebase Online Mode
 (function() {
-    if (typeof window.firebase === 'undefined') {
-        window.firebaseOfflineMode = false;
-        window.firebase = {
-            database: function() {
-                window.firebaseOfflineMode = true;
-                return {
-                    ref: function() { return { on: function() {}, once: function() {}, off: function() {}, set: function() {}, update: function() {}, remove: function() {} }; }
-                };
-            },
-            auth: function() {
-                window.firebaseOfflineMode = true;
-                return {
-                    onAuthStateChanged: function(cb) { cb(null); return function(){}; },
-                    signOut: function() { return Promise.resolve(); },
-                    currentUser: null
-                };
-            },
-            apps: [],
-        };
+    // Always force online mode
+    window.firebaseOfflineMode = false;
+    console.log('🔥 Firebase online mode forced - will connect to real database');
+    
+    // Wait for Firebase SDK to load
+    let attempts = 0;
+    const maxAttempts = 50;
+    
+    function checkFirebaseSDK() {
+        attempts++;
+        if (typeof window.firebase !== 'undefined' && window.firebase.apps) {
+            console.log('✅ Firebase SDK loaded successfully after', attempts, 'attempts');
+            return;
+        }
+        
+        if (attempts < maxAttempts) {
+            setTimeout(checkFirebaseSDK, 100);
+        } else {
+            console.error('❌ Firebase SDK failed to load after', maxAttempts, 'attempts');
+        }
     }
+    
+    checkFirebaseSDK();
 })();
 </script>
 <html lang="en">
@@ -234,6 +237,48 @@
             overflow-x: auto;
         }
 
+        /* Toggle button styles */
+        .view-toggle-section {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .toggle-buttons {
+            display: inline-flex;
+            background: #f3f4f6;
+            border-radius: 8px;
+            padding: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .toggle-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .toggle-btn.active {
+            background: #059669 !important;
+            color: white !important;
+        }
+
+        .toggle-btn:not(.active) {
+            background: transparent;
+            color: #374151;
+        }
+
         /* Modern table styles */
         .attendance-table {
             width: 100%;
@@ -425,6 +470,39 @@
         .btn-primary:hover {
             background: var(--primary-dark);
             transform: translateY(-2px);
+        }
+        
+        /* Present/Absent Status Colors */
+        .text-success {
+            color: #10B981 !important;
+            font-weight: bold;
+        }
+        
+        .text-danger {
+            color: #EF4444 !important;
+            font-weight: bold;
+        }
+        
+        .text-warning {
+            color: #F59E0B !important;
+            font-weight: bold;
+        }
+        
+        /* Status specific styling */
+        .status-present {
+            background-color: #D1FAE5;
+            color: #065F46;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .status-absent {
+            background-color: #FEE2E2;
+            color: #991B1B;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
         }
 
         .export-section {
@@ -645,95 +723,6 @@
             font-size: 0.95rem;
         }
 
-        .table-container {
-            background: var(--white);
-            padding: 25px;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            margin-bottom: 30px;
-        }
-        
-        .table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--border);
-        }
-        
-        .table-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text-dark);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .table-actions {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .table-responsive {
-            overflow-x: auto;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-        }
-        
-        .attendance-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-        }
-        
-        .attendance-table thead {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: var(--white);
-        }
-        
-        .attendance-table th {
-            padding: 12px 8px;
-            text-align: left;
-            font-weight: 600;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-right: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .attendance-table th:last-child {
-            border-right: none;
-        }
-        
-        .attendance-table tbody tr {
-            border-bottom: 1px solid var(--border);
-            transition: background-color 0.2s ease;
-        }
-        
-        .attendance-table tbody tr:hover {
-            background-color: #f8fafc;
-        }
-        
-        .attendance-table tbody tr:nth-child(even) {
-            background-color: #fafbfc;
-        }
-        
-        .attendance-table tbody tr:nth-child(even):hover {
-            background-color: #f1f5f9;
-        }
-        
-        .attendance-table td {
-            padding: 12px 8px;
-            vertical-align: middle;
-            border-right: 1px solid var(--border);
-        }
-        
-        .attendance-table td:last-child {
-            border-right: none;
-        }
-        
         .attendance-edit {
             display: flex;
             flex-direction: column;
@@ -864,165 +853,6 @@
             margin: 0;
             font-size: 1rem;
         }
-        
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-        }
-        
-        .modal-content {
-            background-color: white;
-            margin: 5% auto;
-            padding: 0;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 600px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            animation: modalSlideIn 0.3s ease-out;
-        }
-        
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-50px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-        
-        .modal-header {
-            padding: 20px 25px;
-            border-bottom: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: linear-gradient(135deg, var(--primary) 0%, #6366f1 100%);
-            color: white;
-            border-radius: 12px 12px 0 0;
-        }
-        
-        .modal-title {
-            margin: 0;
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-        
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: white;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: background-color 0.2s;
-        }
-        
-        .close-btn:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-        }
-        
-        .modal-body {
-            padding: 25px;
-        }
-        
-        .modal-footer {
-            padding: 20px 25px;
-            border-top: 1px solid #e5e7eb;
-            background-color: #f9fafb;
-            border-radius: 0 0 12px 12px;
-        }
-        
-        .records-list {
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-        }
-        
-        .record-item {
-            padding: 15px;
-            border-bottom: 1px solid #f3f4f6;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: background-color 0.2s;
-        }
-        
-        .record-item:last-child {
-            border-bottom: none;
-        }
-        
-        .record-item:hover {
-            background-color: #f9fafb;
-        }
-        
-        .record-info {
-            flex: 1;
-        }
-        
-        .record-date {
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 4px;
-        }
-        
-        .record-subject {
-            color: #6b7280;
-            font-size: 0.9rem;
-        }
-        
-        .attendance-toggle {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .toggle-btn {
-            padding: 6px 12px;
-            border: 2px solid;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .toggle-btn.present {
-            border-color: #10b981;
-            background-color: #ecfdf5;
-            color: #065f46;
-        }
-        
-        .toggle-btn.present.active {
-            background-color: #10b981;
-            color: white;
-        }
-        
-        .toggle-btn.absent {
-            border-color: #ef4444;
-            background-color: #fef2f2;
-            color: #991b1b;
-        }
-        
-        .toggle-btn.absent.active {
-            background-color: #ef4444;
-            color: white;
-        }
     </style>
 </head>
 <body>
@@ -1069,11 +899,16 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="subject">Subject</label>
-                    <select id="subject">
-                        <option value="">All Subjects</option>
-                        <!-- Subject options will be populated dynamically -->
+                    <label for="lectureType">Lecture Type</label>
+                    <select id="lectureType">
+                        <option value="">All Lectures</option>
+                        <option value="theory">Theory</option>
+                        <option value="practical">Practical</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label for="subject">Subject</label>
+                    <input type="text" id="subject" placeholder="Enter subject name" oninput="this.value = this.value.toUpperCase()">
                 </div>
                 <div class="form-group">
                     <label for="startDate">From Date</label>
@@ -1082,13 +917,6 @@
                 <div class="form-group">
                     <label for="endDate">To Date</label>
                     <input type="date" id="endDate">
-                </div>
-                <div class="form-group">
-                    <label for="reportType">Report Type</label>
-                    <select id="reportType">
-                        <option value="subject-wise">Subject-wise Attendance</option>
-                        <option value="consolidated">Consolidated Defaulter List</option>
-                    </select>
                 </div>
                 <div class="form-group">
                     <label for="percentageFilter">Attendance Filter</label>
@@ -1109,136 +937,31 @@
                         <span class="input-group-text">%</span>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>&nbsp;</label>
-                    <button onclick="loadReports()" class="btn btn-primary">
-                        <i class="fas fa-sync"></i>
-                        Update Reports
-            </button>
-                </div>
+
             </div>
         </div>
 
-        <!-- Load and Export Buttons -->
+        <!-- Export Button Only -->
         <div class="action-buttons" style="margin: 20px 0; text-align: center;">
-            <button onclick="loadReports()" class="btn btn-primary" style="margin-right: 10px;">
-                <i class="fas fa-search"></i>
-                Load Reports
-            </button>
-            <button onclick="exportToExcel()" class="btn btn-success" style="margin-right: 10px;">
+            <button onclick="exportToExcel()" class="btn btn-success">
                 <i class="fas fa-file-excel"></i>
                 Export to Excel
             </button>
-            <button onclick="confirmDeleteAllAttendance()" class="btn btn-danger">
-                <i class="fas fa-trash"></i>
-                Delete All Attendance
-            </button>
         </div>
 
-        <!-- Reports Table -->
-        <div class="table-container" id="reportsContainer" style="margin-top: 30px; display: none;">
-            <div class="table-header">
-                <h3 class="table-title">
-                    <i class="fas fa-table"></i>
-                    Attendance Reports
-                </h3>
-                <div class="table-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="toggleSelectAll()">
-                        <i class="fas fa-check-square"></i>
-                        Select All
-                    </button>
-                    <button id="deleteSelectedBtn" class="btn btn-sm btn-danger" onclick="deleteSelectedStudents()" disabled>
-                        <i class="fas fa-trash"></i>
-                        Delete Selected
-                    </button>
-                </div>
-            </div>
-            <div class="table-responsive">
-                <table class="attendance-table">
-                    <thead>
-                        <tr>
-                            <th width="40"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()"></th>
-                            <th>Roll No</th>
-                            <th>Student Name</th>
-                            <th>Department</th>
-                            <th>Year</th>
-                            <th>Division</th>
-                            <th>Subject</th>
-                            <th>Lecture Type</th>
-                            <th>Date Taken</th>
-                            <th>Status</th>
-                            <th>Attendance %</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="attendanceTableBody">
-                        <!-- Table content will be populated here -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
 
-        <!-- Edit Student Attendance Modal -->
-        <div id="editStudentModal" class="modal">
-            <div class="modal-content" style="max-width: 800px;">
-                <div class="modal-header">
-                    <h3 class="modal-title">Edit Student Attendance</h3>
-                    <button class="close-btn" onclick="closeEditModal()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="student-info" style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <h4 id="editStudentName" style="margin: 0 0 5px 0; color: #1f2937;"></h4>
-                        <p id="editStudentDetails" style="margin: 0; color: #6b7280; font-size: 0.9rem;"></p>
-                    </div>
-                    
-                    <div class="attendance-records">
-                        <h5 style="margin-bottom: 15px; color: #374151;">Attendance Records:</h5>
-                        <div id="attendanceRecordsList" class="records-list">
-                            <!-- Attendance records will be populated here -->
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer" style="margin-top: 20px; text-align: right;">
-                    <button onclick="closeEditModal()" class="btn btn-secondary" style="margin-right: 10px;">
-                        <i class="fas fa-times"></i>
-                        Cancel
-                    </button>
-                    <button onclick="saveAttendanceChanges()" class="btn btn-primary">
-                        <i class="fas fa-save"></i>
-                        Save Changes
-                    </button>
-                </div>
-            </div>
-        </div>
 
-        <!-- Confirmation Modal -->
-        <div id="deleteConfirmModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 class="modal-title">Confirm Delete</h3>
-                    <button class="close-btn" onclick="closeDeleteModal()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <p style="color: #dc2626; margin-bottom: 15px;">
-                        <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
-                        Warning: This action cannot be undone!
-                    </p>
-                    <p>Are you sure you want to delete all attendance records?</p>
-                </div>
-                <div class="modal-footer" style="margin-top: 20px; text-align: right;">
-                    <button onclick="closeDeleteModal()" class="btn btn-secondary" style="margin-right: 10px;">
-                        <i class="fas fa-times"></i>
-                        Cancel
-                    </button>
-                    <button onclick="confirmDeleteAllAttendance()" class="btn btn-danger" style="margin-left: 10px;">
-                        <i class="fas fa-trash"></i>
-                        Delete All Attendance
-                    </button>
-                    <button onclick="testEditFunction()" class="btn btn-warning" style="margin-left: 10px;">
-                        <i class="fas fa-test"></i>
-                        Test Edit
-                    </button>
-                </div>
+        <!-- View Toggle Section -->
+        <div class="view-toggle-section" style="margin-bottom: 20px; text-align: center;">
+            <div class="toggle-buttons" style="display: inline-flex; background: #f3f4f6; border-radius: 8px; padding: 4px;">
+                <button id="subjectViewBtn" class="toggle-btn active" onclick="switchView('subject')" 
+                        style="padding: 8px 16px; border: none; border-radius: 6px; background: #059669; color: white; cursor: pointer; margin-right: 4px;">
+                    <i class="fas fa-list"></i> Subject-wise View
+                </button>
+                <button id="combinedViewBtn" class="toggle-btn" onclick="switchView('combined')" 
+                        style="padding: 8px 16px; border: none; border-radius: 6px; background: transparent; color: #374151; cursor: pointer;">
+                    <i class="fas fa-compress-alt"></i> Combined View
+                </button>
             </div>
         </div>
 
@@ -1246,24 +969,38 @@
                 <div class="table-container">
             <table class="attendance-table">
                         <thead>
-                            <tr>
-                        <th>
+                    <tr>
+                        <th rowspan="2">
                             <input type="checkbox" id="selectAll" onclick="toggleSelectAll()">
                         </th>
-                        <th>Roll No</th>
-                        <th>Name</th>
-                        <th>Department</th>
-                        <th>Year</th>
-                        <th>Division</th>
-                        <th>Subject</th>
-                        <th>Lecture Type</th>
-                        <th>Attendance Status</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th rowspan="2">Roll No</th>
+                        <th rowspan="2">Name</th>
+                        <th rowspan="2">Department</th>
+                        <th rowspan="2">Year</th>
+                        <th rowspan="2">Division</th>
+                        <th colspan="4" style="background: #059669; color: white;">Theory Classes</th>
+                        <th colspan="4" style="background: #DC2626; color: white;">Practical Classes</th>
+                        <th rowspan="2">Overall %</th>
+                        <th rowspan="2">Actions</th>
+                    </tr>
+                    <tr>
+                        <th style="background: #059669; color: white;">Present</th>
+                        <th style="background: #059669; color: white;">Absent</th>
+                        <th style="background: #059669; color: white;">Total</th>
+                        <th style="background: #059669; color: white;">%</th>
+                        <th style="background: #DC2626; color: white;">Present</th>
+                        <th style="background: #DC2626; color: white;">Absent</th>
+                        <th style="background: #DC2626; color: white;">Total</th>
+                        <th style="background: #DC2626; color: white;">%</th>
                     </tr>
                 </thead>
                 <tbody id="attendanceTableBody">
-                        <!-- Table content will be loaded here -->
+                    <tr>
+                        <td colspan="16" class="text-center p-4">
+                            <i class="fas fa-info-circle fa-2x mb-3"></i>
+                            <p>Click "Load Reports" to view attendance data</p>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -1467,6 +1204,7 @@
             });
             document.getElementById('year').addEventListener('change', loadReports);
             document.getElementById('division').addEventListener('change', loadReports);
+            document.getElementById('lectureType').addEventListener('change', loadReports);
             document.getElementById('startDate').addEventListener('change', loadReports);
             document.getElementById('endDate').addEventListener('change', loadReports);
             document.getElementById('percentageFilter').addEventListener('change', loadReports);
@@ -1478,8 +1216,8 @@
                 customGroup.style.display = this.value === 'custom' ? 'block' : 'none';
             });
 
-            // Populate subject dropdown
-            populateSubjectDropdown();
+            // Initialize table headers for default view (subject-wise)
+            updateTableHeaders(currentViewMode);
 
             // Load initial reports
             console.log('About to call loadReports()...');
@@ -2080,7 +1818,6 @@
                     ];
                     
                     console.log('Showing demo data:', demoStudents);
-                    document.getElementById('reportsContainer').style.display = 'block';
                     updateTable(demoStudents);
                     return;
                 }
@@ -2100,8 +1837,18 @@
                 }
 
                 // Get all teachers data first
-                const teachersSnapshot = await window.db.ref('teachers').once('value');
-                const teachersData = teachersSnapshot.val() || {};
+                let teachersData = {};
+                if (window.db && typeof window.db.ref === 'function') {
+                    try {
+                        const teachersSnapshot = await window.db.ref('teachers').once('value');
+                        teachersData = (teachersSnapshot && typeof teachersSnapshot.val === 'function') ? teachersSnapshot.val() || {} : {};
+                    } catch (error) {
+                        console.warn('Error loading teachers data:', error);
+                        teachersData = {};
+                    }
+                } else {
+                    console.warn('Firebase database not available, using empty teachers data');
+                }
                 console.log('All teachers data loaded:', teachersData);
 
                 // Create comprehensive teacher name mapping
@@ -2207,31 +1954,28 @@
                     department: document.getElementById('department').value,
                     year: document.getElementById('year').value,
                     division: document.getElementById('division').value,
+                    lectureType: document.getElementById('lectureType').value,
                     subject: document.getElementById('subject').value,
                     startDate: document.getElementById('startDate').value,
                     endDate: document.getElementById('endDate').value,
-                    reportType: document.getElementById('reportType').value,
                     teacherId: teacherId,
                     teacherNames: teacherNames, // Pass all teacher names
                     teachersData: teachersData // Pass original teachers data for lookup
                 };
 
-                // Enhanced filter logging
-                console.log('=== Applied Filters Debug ===');
-                console.log('Department Filter:', filters.department || 'None');
-                console.log('Year Filter:', filters.year || 'None');
-                console.log('Division Filter:', filters.division || 'None');
-                console.log('Subject Filter:', filters.subject || 'None');
-                console.log('Start Date Filter:', filters.startDate || 'None');
-                console.log('End Date Filter:', filters.endDate || 'None');
-                console.log('Teacher ID Filter:', filters.teacherId || 'None');
-                console.log('Full Filters Object:', filters);
-                console.log('=== End Filter Debug ===');
+                console.log('Applied filters:', filters);
 
                 // Show loading state
                 showLoadingState();
 
                 try {
+                    // Check if Firebase is available
+                    if (!window.db || typeof window.db.ref !== 'function') {
+                        console.warn('Firebase database not available, showing empty attendance data');
+                        updateTable([]);
+                        return;
+                    }
+                    
                     // First verify access
                     await window.db.ref('.info/connected').once('value');
                     console.log('Firebase connection verified');
@@ -2243,15 +1987,22 @@
                         attendanceQuery = attendanceQuery.orderByChild('teacherId').equalTo(teacherId);
                     }
 
-                    const [attendanceSnapshot, studentsSnapshot] = await Promise.all([
-                        attendanceQuery.once('value'),
-                        window.db.ref('students').once('value')
-                    ]);
+                    let attendanceSnapshot, studentsSnapshot;
+                    try {
+                        [attendanceSnapshot, studentsSnapshot] = await Promise.all([
+                            attendanceQuery.once('value'),
+                            window.db.ref('students').once('value')
+                        ]);
+                    } catch (error) {
+                        console.warn('Error fetching data from Firebase:', error);
+                        updateTable([]);
+                        return;
+                    }
                     
                     console.log('Data fetched successfully');
                     
-                    const attendanceData = attendanceSnapshot.val() || {};
-                    const studentsData = studentsSnapshot.val() || {};
+                    const attendanceData = (attendanceSnapshot && typeof attendanceSnapshot.val === 'function') ? attendanceSnapshot.val() || {} : {};
+                    const studentsData = (studentsSnapshot && typeof studentsSnapshot.val === 'function') ? studentsSnapshot.val() || {} : {};
 
                     console.log('Records found:', {
                         attendance: Object.keys(attendanceData).length,
@@ -2272,20 +2023,11 @@
                         });
                     });
 
-                    // Process and display data based on report type
-                    console.log('Processing attendance data for report type:', filters.reportType);
-                    let processedData;
-                    
-                    if (filters.reportType === 'consolidated') {
-                        processedData = processConsolidatedAttendance(attendanceData, studentsData, filters);
-                        console.log('Consolidated data processed:', processedData.length, 'students found');
-                    } else {
-                        processedData = await processAttendanceData(attendanceData, studentsData, filters);
-                        console.log('Subject-wise data processed:', processedData.length, 'students found');
-                    }
-                    
+                    // Process and display data
+                    console.log('Processing attendance data...');
+                    const processedData = await processAttendanceData(attendanceData, studentsData, filters);
+                    console.log('Processed data:', processedData.length, 'students found');
                     console.log('Sample processed data:', processedData.slice(0, 2));
-                    document.getElementById('reportsContainer').style.display = 'block';
                     updateTable(processedData);
                     console.log('Table updated successfully');
 
@@ -2299,80 +2041,712 @@
             }
         }
 
+        // Global variable to track current view mode
+        let currentViewMode = 'subject'; // 'combined' or 'subject'
+        
+        // Function to switch between views
+        function switchView(viewMode) {
+            currentViewMode = viewMode;
+            
+            // Update button styles
+            const combinedBtn = document.getElementById('combinedViewBtn');
+            const subjectBtn = document.getElementById('subjectViewBtn');
+            
+            if (viewMode === 'combined') {
+                combinedBtn.style.background = '#059669';
+                combinedBtn.style.color = 'white';
+                subjectBtn.style.background = 'transparent';
+                subjectBtn.style.color = '#374151';
+            } else {
+                subjectBtn.style.background = '#059669';
+                subjectBtn.style.color = 'white';
+                combinedBtn.style.background = 'transparent';
+                combinedBtn.style.color = '#374151';
+            }
+            
+            // Update table headers
+            updateTableHeaders(viewMode);
+            
+            // Reload data with new view
+            loadReports();
+        }
+        
+        // Show loading spinner in table
+function showLoadingState() {
+    const tableBody = document.getElementById('attendanceTableBody');
+    if (tableBody) {
+        const colSpan = currentViewMode === 'subject' ? '4' : '16';
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="${colSpan}" class="text-center p-4">
+                    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                    <p>Loading attendance records...</p>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// Show error message in table
+function showError(message) {
+    const tableBody = document.getElementById('attendanceTableBody');
+    if (tableBody) {
+        const colSpan = currentViewMode === 'subject' ? '4' : '16';
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="${colSpan}" class="text-center p-4 text-danger">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                    <p>${message || 'An error occurred while loading attendance records.'}</p>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// Update table with processed data
+function updateTable(students) {
+    const tableBody = document.getElementById('attendanceTableBody');
+    if (!tableBody) {
+        console.error('Table body not found');
+        return;
+    }
+    
+    if (!students || students.length === 0) {
+        const colSpan = currentViewMode === 'subject' ? '17' : '16';
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="${colSpan}" class="text-center" style="padding: 40px;">
+                    <i class="fas fa-info-circle fa-2x mb-3"></i>
+                    <p>No attendance records found</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    console.log('Updating table with', students.length, 'students');
+    
+    // Generate table rows based on current view mode
+    if (currentViewMode === 'subject') {
+        // Subject-wise detailed view: show individual student records
+        tableBody.innerHTML = students.map(record => `
+            <tr>
+                <td>${record.rollNo || '-'}</td>
+                <td>${record.name || '-'}</td>
+                <td>${getDepartmentFullName(record.department) || record.department || '-'}</td>
+                <td>${record.year || '-'}</td>
+                <td>${record.division || '-'}</td>
+                <td>${record.subject || '-'}</td>
+                <td class="${record.lectureType === 'practical' ? 'text-danger' : 'text-success'}">${record.lectureType || 'theory'}</td>
+                <td>${record.date || '-'}</td>
+                <td class="${record.statusClass} ${record.status === 'Present' ? 'status-present' : 'status-absent'}" style="font-weight: bold;">${record.status || '-'}</td>
+                <td class="${record.statusClass} ${record.status === 'Present' ? 'status-present' : 'status-absent'}" style="font-weight: bold;">${record.attendancePercentage}%</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="editStudentRecord('${record.recordKey}', '${record.studentId}')" title="Edit Record">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    } else {
+        // Combined view: show student details with theory/practical columns
+        const selectedStudents = new Set(); // For checkbox functionality
+        
+        tableBody.innerHTML = students.map(student => {
+            // Calculate theory totals
+            const theoryTotal = (student.theoryPresent || 0) + (student.theoryAbsent || 0);
+            const theoryPercentage = theoryTotal > 0 ? Math.round((student.theoryPresent / theoryTotal) * 100) : 0;
+            
+            // Calculate practical totals
+            const practicalTotal = (student.practicalPresent || 0) + (student.practicalAbsent || 0);
+            const practicalPercentage = practicalTotal > 0 ? Math.round((student.practicalPresent / practicalTotal) * 100) : 0;
+            
+            // Calculate overall percentage
+            const totalPresent = (student.theoryPresent || 0) + (student.practicalPresent || 0);
+            const totalClasses = theoryTotal + practicalTotal;
+            const percentage = totalClasses > 0 ? Math.round((totalPresent / totalClasses) * 100) : 0;
+            
+            console.log('📊 Student display data:', {
+                name: student.name,
+                theoryPresent: student.theoryPresent || 0,
+                theoryAbsent: student.theoryAbsent || 0,
+                theoryTotal,
+                practicalPresent: student.practicalPresent || 0,
+                practicalAbsent: student.practicalAbsent || 0,
+                practicalTotal,
+                totalPresent,
+                totalClasses,
+                percentage
+            });
+            
+            return `
+                <tr>
+                    <td><input type="checkbox" class="student-checkbox" value="${student.id || ''}" ${selectedStudents && selectedStudents.has && selectedStudents.has(student.id) ? 'checked' : ''} onchange="toggleStudent('${student.id}', this.checked)"></td>
+                    <td>${student.rollNo || '-'}</td>
+                    <td>${student.name || '-'}</td>
+                    <td>${student.departmentName || getDepartmentFullName(student.department) || '-'}</td>
+                    <td>${student.year || '-'}</td>
+                    <td>${student.division || '-'}</td>
+                    <td class="theory-data text-success" style="font-weight: bold;">${student.theoryPresent || 0}</td>
+                    <td class="theory-data text-danger" style="font-weight: bold;">${student.theoryAbsent || 0}</td>
+                    <td class="theory-data">${theoryTotal}</td>
+                    <td class="theory-data ${getPercentageClass(theoryPercentage)}">${theoryPercentage}%</td>
+                    <td class="practical-data text-success" style="font-weight: bold;">${student.practicalPresent || 0}</td>
+                    <td class="practical-data text-danger" style="font-weight: bold;">${student.practicalAbsent || 0}</td>
+                    <td class="practical-data">${practicalTotal}</td>
+                    <td class="practical-data ${getPercentageClass(practicalPercentage)}">${practicalPercentage}%</td>
+                    <td class="${getPercentageClass(percentage)}" style="font-weight: bold;">${percentage}%</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="editStudent('${student.id}')" title="Edit Student">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+    
+    console.log('Table updated successfully');
+}
+
+// Helper function to get percentage class for styling
+function getPercentageClass(percentage) {
+    if (percentage >= 75) return 'text-success';
+    if (percentage >= 50) return 'text-warning';
+    return 'text-danger';
+}
+
+// Process attendance data for both view modes
+async function processAttendanceData(attendanceData, studentsData, filters) {
+    console.log('Processing attendance data with filters:', filters);
+    console.log('Current view mode:', currentViewMode);
+
+    // --- SUBJECT-WISE DETAILED VIEW ---
+    if (currentViewMode === 'subject') {
+        console.log('🔍 Processing subject-wise detailed view...');
+        const detailedRecords = [];
+        
+        Object.entries(attendanceData).forEach(([recordKey, record]) => {
+            console.log('📝 Processing record for subject view:', recordKey, {
+                subject: record.subject,
+                date: record.date,
+                lectureType: record.lectureType,
+                hasStudents: !!record.students
+            });
+            
+            // Skip if not the teacher's record
+            if (filters.teacherId && record.teacherId !== filters.teacherId) return;
+            if (!record.subject || !record.date || !record.students) return;
+
+            // Apply subject filter
+            if (filters.subject && !record.subject.toLowerCase().includes(filters.subject.toLowerCase())) return;
+
+            // Apply lecture type filter
+            if (filters.lectureType && filters.lectureType.trim() !== '') {
+                const recordLectureType = record.lectureType || 'theory'; // Default to theory if not specified
+                if (recordLectureType !== filters.lectureType) {
+                    console.log('⏭️ Skipping record - lecture type filter mismatch:', recordLectureType, 'vs', filters.lectureType);
+                    return;
+                }
+            }
+
+            // Date filtering
+            const recordDate = new Date(record.date);
+            const start = filters.startDate ? new Date(filters.startDate) : null;
+            const end = filters.endDate ? new Date(filters.endDate) : null;
+            if ((start && recordDate < start) || (end && recordDate > end)) return;
+
+            // Process each student in this record
+            Object.entries(record.students).forEach(([studentId, status]) => {
+                const student = studentsData[studentId] || {};
+                
+                // Determine status
+                const isPresent = (
+                    status === true || 
+                    status === 'present' || 
+                    status === 'Present' || 
+                    status === 'P' || 
+                    status === 1 ||
+                    status === '1'
+                );
+                
+                // Extract department/year/division from record.class
+                let department = '', year = '', division = '';
+                if (record.class) {
+                    const yearMatch = record.class.match(/(FY|SY|TY|BE)/i);
+                    const deptMatch = record.class.match(/(CT|IT|ME|CE|EE|ET|AI|COMP|CIVIL|MECH|ENTC)/i);
+                    const divMatch = record.class.match(/[^A-Z]([A-C])[^A-Z]?/i);
+                    year = yearMatch ? yearMatch[1].toUpperCase() : '';
+                    let dep = deptMatch ? deptMatch[1].toUpperCase() : '';
+                    switch(dep) {
+                        case 'COMP': dep = 'CT'; break;
+                        case 'CIVIL': dep = 'CE'; break;
+                        case 'MECH': dep = 'ME'; break;
+                        case 'ENTC': dep = 'ET'; break;
+                    }
+                    department = dep;
+                    division = divMatch ? divMatch[1].toUpperCase() : '';
+                }
+                
+                // Get final values for filtering
+                const finalDepartment = department || student.branch || student.department || '-';
+                const finalYear = year || student.year || '-';
+                const finalDivision = division || student.division || '-';
+                
+                // Apply department filter
+                if (filters.department && finalDepartment !== filters.department) return;
+                
+                // Apply year filter
+                if (filters.year && finalYear !== filters.year) return;
+                
+                // Apply division filter
+                if (filters.division && finalDivision !== filters.division) return;
+                
+                // Create detailed record for each student
+                detailedRecords.push({
+                    id: `${recordKey}_${studentId}`,
+                    rollNo: student.rollNo || student.rollNumber || '-',
+                    name: student.name || student.firstName || '-',
+                    department: finalDepartment,
+                    year: finalYear,
+                    division: finalDivision,
+                    subject: record.subject,
+                    lectureType: record.lectureType || 'theory',
+                    date: record.date,
+                    status: isPresent ? 'Present' : 'Absent',
+                    statusClass: isPresent ? 'text-success' : 'text-danger',
+                    attendancePercentage: isPresent ? 100 : 0,
+                    recordKey: recordKey,
+                    studentId: studentId
+                });
+            });
+        });
+        
+        console.log('🎯 Subject-wise detailed records:', detailedRecords.length, 'records created');
+        console.log('📊 Sample detailed records:', detailedRecords.slice(0, 3));
+        
+        // Sort by date (newest first), then by subject, then by roll number
+        detailedRecords.sort((a, b) => {
+            const dateCompare = new Date(b.date) - new Date(a.date);
+            if (dateCompare !== 0) return dateCompare;
+            const subjectCompare = String(a.subject || '').localeCompare(String(b.subject || ''));
+            if (subjectCompare !== 0) return subjectCompare;
+            return String(a.rollNo || '').localeCompare(String(b.rollNo || ''));
+        });
+        
+        return detailedRecords;
+    }
+
+    // --- COMBINED VIEW (per student) ---
+    const studentMap = {};
+    
+    console.log('🔍 Processing attendance records for combined view...');
+    console.log('Total attendance records to process:', Object.keys(attendanceData).length);
+    
+    Object.entries(attendanceData).forEach(([recordKey, record]) => {
+        console.log('📝 Processing record:', recordKey, {
+            teacherId: record.teacherId,
+            subject: record.subject,
+            date: record.date,
+            hasStudents: !!record.students,
+            studentsType: typeof record.students,
+            studentsKeys: record.students ? Object.keys(record.students).length : 0
+        });
+        
+        // Skip if teacher filter is applied and doesn't match
+        if (filters.teacherId && record.teacherId !== filters.teacherId) {
+            console.log('⏭️ Skipping - teacher filter mismatch');
+            return;
+        }
+        
+        // Apply subject filter
+        if (filters.subject && filters.subject.trim() !== '') {
+            if (!record.subject || !record.subject.toLowerCase().includes(filters.subject.toLowerCase())) {
+                console.log('⏭️ Skipping - subject filter mismatch:', record.subject, 'vs', filters.subject);
+                return;
+            }
+        }
+        
+        // Apply lecture type filter
+        if (filters.lectureType && filters.lectureType.trim() !== '') {
+            const recordLectureType = record.lectureType || 'theory'; // Default to theory if not specified
+            if (recordLectureType !== filters.lectureType) {
+                console.log('⏭️ Skipping - lecture type filter mismatch:', recordLectureType, 'vs', filters.lectureType);
+                return;
+            }
+        }
+        
+        // Apply date filters
+        if ((filters.startDate && filters.startDate.trim() !== '') || (filters.endDate && filters.endDate.trim() !== '')) {
+            if (!record.date) {
+                console.log('⏭️ Skipping - no date in record');
+                return;
+            }
+            
+            const recordDate = new Date(record.date);
+            const start = (filters.startDate && filters.startDate.trim() !== '') ? new Date(filters.startDate) : null;
+            const end = (filters.endDate && filters.endDate.trim() !== '') ? new Date(filters.endDate) : null;
+            
+            if ((start && recordDate < start) || (end && recordDate > end)) {
+                console.log('⏭️ Skipping - date filter mismatch:', record.date, 'not between', filters.startDate, 'and', filters.endDate);
+                return;
+            }
+        }
+        
+        // Check if students data exists
+        if (!record.students) {
+            console.log('⚠️ No students data in record:', recordKey);
+            return;
+        }
+        
+        // Process each student in the record
+        Object.entries(record.students).forEach(([studentId, status]) => {
+            console.log('👨‍🎓 Processing student:', studentId, 'Status:', status);
+            
+            // Initialize student if not exists
+            if (!studentMap[studentId]) {
+                const student = studentsData[studentId] || {};
+                
+                // Get student department/year/division for filtering
+                const studentDept = student.branch || student.department || '-';
+                const studentYear = student.year || '-';
+                const studentDiv = student.division || '-';
+                
+                // Apply department filter
+                if (filters.department && filters.department.trim() !== '' && studentDept !== filters.department) {
+                    console.log('⏭️ Skipping student - department filter mismatch:', studentDept, 'vs', filters.department);
+                    return;
+                }
+                
+                // Apply year filter
+                if (filters.year && filters.year.trim() !== '' && studentYear !== filters.year) {
+                    console.log('⏭️ Skipping student - year filter mismatch:', studentYear, 'vs', filters.year);
+                    return;
+                }
+                
+                // Apply division filter
+                if (filters.division && filters.division.trim() !== '' && studentDiv !== filters.division) {
+                    console.log('⏭️ Skipping student - division filter mismatch:', studentDiv, 'vs', filters.division);
+                    return;
+                }
+                
+                studentMap[studentId] = {
+                    id: studentId,
+                    name: student.name || student.firstName || '-',
+                    rollNo: student.rollNo || student.rollNumber || '-',
+                    department: studentDept,
+                    year: studentYear,
+                    division: studentDiv,
+                    present: 0,
+                    absent: 0,
+                    total: 0,
+                    theoryPresent: 0,
+                    theoryAbsent: 0,
+                    practicalPresent: 0,
+                    practicalAbsent: 0
+                };
+                console.log('✅ Created new student entry:', studentMap[studentId]);
+            } else {
+                // Check if existing student matches filters
+                const existingStudent = studentMap[studentId];
+                
+                // Apply filters to existing student
+                if (filters.department && filters.department.trim() !== '' && existingStudent.department !== filters.department) {
+                    console.log('⏭️ Skipping existing student - department filter mismatch:', existingStudent.department, 'vs', filters.department);
+                    return;
+                }
+                
+                if (filters.year && filters.year.trim() !== '' && existingStudent.year !== filters.year) {
+                    console.log('⏭️ Skipping existing student - year filter mismatch:', existingStudent.year, 'vs', filters.year);
+                    return;
+                }
+                
+                if (filters.division && filters.division.trim() !== '' && existingStudent.division !== filters.division) {
+                    console.log('⏭️ Skipping existing student - division filter mismatch:', existingStudent.division, 'vs', filters.division);
+                    return;
+                }
+            }
+            
+            // Determine if present or absent
+            const isPresent = (
+                status === true || 
+                status === 'present' || 
+                status === 'Present' || 
+                status === 'P' || 
+                status === 1 ||
+                status === '1'
+            );
+            
+            console.log('📊 Student attendance check:', {
+                studentId,
+                status,
+                isPresent,
+                statusType: typeof status
+            });
+            
+            // Update counts
+            if (isPresent) {
+                studentMap[studentId].present++;
+                // Check if it's theory or practical
+                if (record.lectureType === 'practical') {
+                    studentMap[studentId].practicalPresent++;
+                } else {
+                    studentMap[studentId].theoryPresent++;
+                }
+            } else {
+                studentMap[studentId].absent++;
+                // Check if it's theory or practical
+                if (record.lectureType === 'practical') {
+                    studentMap[studentId].practicalAbsent++;
+                } else {
+                    studentMap[studentId].theoryAbsent++;
+                }
+            }
+            studentMap[studentId].total++;
+            
+            console.log('📈 Updated student counts:', {
+                studentId,
+                present: studentMap[studentId].present,
+                absent: studentMap[studentId].absent,
+                total: studentMap[studentId].total
+            });
+        });
+    });
+    
+    console.log('🎯 Final student map:', Object.keys(studentMap).length, 'students processed');
+    console.log('📊 Sample processed students:', Object.values(studentMap).slice(0, 3));
+    let rows = Object.values(studentMap);
+    
+    // Apply percentage filtering
+    const percentageFilter = document.getElementById('percentageFilter').value;
+    if (percentageFilter && percentageFilter.trim() !== '') {
+        let thresholdPercentage;
+        
+        if (percentageFilter === 'custom') {
+            const customValue = document.getElementById('customPercentage').value;
+            thresholdPercentage = parseInt(customValue) || 0;
+            if (!customValue || customValue.trim() === '' || thresholdPercentage <= 0) {
+                console.log('🔴 Custom percentage not valid, skipping filter');
+                return rows;
+            }
+        } else {
+            thresholdPercentage = parseInt(percentageFilter);
+        }
+        
+        console.log('📊 Applying percentage filter:', thresholdPercentage + '%');
+        
+        rows = rows.filter(student => {
+            const totalPresent = (student.theoryPresent || 0) + (student.practicalPresent || 0);
+            const totalClasses = (student.theoryPresent || 0) + (student.theoryAbsent || 0) + 
+                               (student.practicalPresent || 0) + (student.practicalAbsent || 0);
+            const percentage = totalClasses > 0 ? Math.round((totalPresent / totalClasses) * 100) : 0;
+            
+            const shouldInclude = percentage < thresholdPercentage;
+            console.log('🔍 Student filter check:', {
+                name: student.name,
+                percentage: percentage + '%',
+                threshold: thresholdPercentage + '%',
+                included: shouldInclude
+            });
+            
+            return shouldInclude;
+        });
+        
+        console.log('📊 After percentage filtering:', rows.length, 'students remaining');
+    }
+    
+    // Sort students by department first, then by roll number within each department
+    console.log('🔄 Sorting students by department and roll number...');
+    rows.sort((a, b) => {
+        // First sort by department
+        const deptCompare = (a.department || '').localeCompare(b.department || '');
+        if (deptCompare !== 0) return deptCompare;
+        
+        // Then sort by roll number within same department
+        const rollA = String(a.rollNo || '');
+        const rollB = String(b.rollNo || '');
+        
+        // Extract numeric part from roll number for proper sorting
+        const numA = parseInt(rollA.replace(/[^0-9]/g, '')) || 0;
+        const numB = parseInt(rollB.replace(/[^0-9]/g, '')) || 0;
+        
+        // If numeric parts are different, sort by number
+        if (numA !== numB) {
+            return numA - numB;
+        }
+        
+        // If numeric parts are same, sort alphabetically
+        return rollA.localeCompare(rollB);
+    });
+    
+    console.log('✅ Students sorted by department and roll number');
+    console.log('📊 First few sorted students:', rows.slice(0, 5).map(s => ({
+        dept: s.department,
+        rollNo: s.rollNo,
+        name: s.name
+    })));
+    
+    return rows;
+}
+
+// Function to update table headers based on view mode
+        function updateTableHeaders(viewMode) {
+    const tableHead = document.querySelector('.attendance-table thead');
+    if (viewMode === 'subject') {
+        // Subject-wise detailed view
+        tableHead.innerHTML = `
+            <tr>
+                <th>Roll No</th>
+                <th>Student Name</th>
+                <th>Department</th>
+                <th>Year</th>
+                <th>Division</th>
+                <th>Subject</th>
+                <th>Lecture Type</th>
+                <th>Date Taken</th>
+                <th>Status</th>
+                <th>Attendance %</th>
+                <th>Actions</th>
+            </tr>
+        `;
+    } else {
+            const tableHead = document.querySelector('.attendance-table thead');
+            if (viewMode === 'subject') {
+                tableHead.innerHTML = `
+                    <tr>
+                        <th>Roll No</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Year</th>
+                        <th>Division</th>
+                        <th>Subject</th>
+                        <th>Present</th>
+                        <th>Absent</th>
+                        <th>Actions</th>
+                    </tr>
+                `;
+            } else {
+                tableHead.innerHTML = `
+                    <tr>
+                        <th rowspan="2"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+                        <th rowspan="2">Roll No</th>
+                        <th rowspan="2">Name</th>
+                        <th rowspan="2">Department</th>
+                        <th rowspan="2">Year</th>
+                        <th rowspan="2">Division</th>
+                        <th colspan="4" style="background: #059669; color: white;">Theory Classes</th>
+                        <th colspan="4" style="background: #DC2626; color: white;">Practical Classes</th>
+                        <th rowspan="2">Overall %</th>
+                        <th rowspan="2">Actions</th>
+                    </tr>
+                    <tr>
+                        <th style="background: #059669; color: white;">Present</th>
+                        <th style="background: #059669; color: white;">Absent</th>
+                        <th style="background: #059669; color: white;">Total</th>
+                        <th style="background: #059669; color: white;">%</th>
+                        <th style="background: #DC2626; color: white;">Present</th>
+                        <th style="background: #DC2626; color: white;">Absent</th>
+                        <th style="background: #DC2626; color: white;">Total</th>
+                        <th style="background: #DC2626; color: white;">%</th>
+                    </tr>
+                `;
+            }
+        }
+
         async function processAttendanceData(attendanceData, studentsData, filters) {
+    console.log('Processing attendance data with filters:', filters);
+    console.log('Current view mode:', currentViewMode);
+
+    // --- SUBJECT-WISE AGGREGATED VIEW ---
+    if (currentViewMode === 'subject') {
+        // Group by {subject, date}
+        const subjectDateMap = {};
+        Object.entries(attendanceData).forEach(([recordKey, record]) => {
+            // Skip if not the teacher's record
+            if (filters.teacherId && record.teacherId !== filters.teacherId) return;
+            if (!record.subject || !record.date || !record.students) return;
+
+            // Apply subject filter
+            if (filters.subject && record.subject && !record.subject.toLowerCase().includes(filters.subject.toLowerCase())) return;
+            // Apply date filter
+            const recordDate = new Date(record.date);
+            const start = filters.startDate ? new Date(filters.startDate) : null;
+            const end = filters.endDate ? new Date(filters.endDate) : null;
+            if ((start && recordDate < start) || (end && recordDate > end)) return;
+
+            // Optionally apply department/year/division filters (from record.class)
+            // ... (expand if needed)
+
+            const key = `${record.subject}__${record.date}`;
+            if (!subjectDateMap[key]) {
+                subjectDateMap[key] = {
+                    subject: record.subject,
+                    date: record.date,
+                    present: 0,
+                    absent: 0,
+                    department: '',
+                    year: '',
+                    division: ''
+                };
+                // Optionally extract department/year/division from record.class
+                if (record.class) {
+                    // Try to extract parts
+                    const yearMatch = record.class.match(/(FY|SY|TY|BE)/i);
+                    const deptMatch = record.class.match(/(CT|IT|ME|CE|EE|ET|AI|COMP|CIVIL|MECH|ENTC)/i);
+                    const divMatch = record.class.match(/[^A-Z]([A-C])[^A-Z]?/i);
+                    subjectDateMap[key].year = yearMatch ? yearMatch[1].toUpperCase() : '';
+                    let dep = deptMatch ? deptMatch[1].toUpperCase() : '';
+                    switch(dep) {
+                        case 'COMP': dep = 'CT'; break;
+                        case 'CIVIL': dep = 'CE'; break;
+                        case 'MECH': dep = 'ME'; break;
+                        case 'ENTC': dep = 'ET'; break;
+                    }
+                    subjectDateMap[key].department = dep;
+                    subjectDateMap[key].division = divMatch ? divMatch[1].toUpperCase() : '';
+                }
+            }
+            // Count present/absent
+            Object.values(record.students).forEach(status => {
+                const isPresent = (
+                    status === true || status === 'true' || status === 'present' || status === 'Present' || status === 'PRESENT' || status === 'P' || status === 'p' || status === 1 || status === '1' || (typeof status === 'string' && status.toLowerCase().trim() === 'present')
+                );
+                if (isPresent) {
+                    subjectDateMap[key].present++;
+                } else {
+                    subjectDateMap[key].absent++;
+                }
+            });
+        });
+        // Convert to array for rendering
+        let rows = Object.values(subjectDateMap);
+        // Sort by date descending, then subject
+        rows.sort((a, b) => (b.date.localeCompare(a.date)) || a.subject.localeCompare(b.subject));
+        return rows;
+    }
+    // --- END SUBJECT-WISE AGGREGATED VIEW ---
+
+    // --- ORIGINAL LOGIC FOR COMBINED VIEW ---
             console.log('Processing attendance data with filters:', filters);
+            console.log('Current view mode:', currentViewMode);
             
             const studentAttendance = {};
             let totalStudents = 0;
             let filteredStudents = 0;
+            let totalTheoryAttendance = 0;
+            let totalPracticalAttendance = 0;
 
-            // Process attendance records and collect students from filtered records only
+            // First, find students who have attendance records
             Object.entries(attendanceData).forEach(([recordKey, record]) => {
                 // Skip if not the teacher's record
                 if (filters.teacherId && record.teacherId !== filters.teacherId) {
                     return;
                 }
-                
-                if (!record || !record.students || !record.date) {
-                    return;
-                }
-                
-                // Apply subject filter FIRST - before collecting students
-                if (filters.subject && filters.subject.trim() !== '') {
-                    const filterSubject = filters.subject.toLowerCase().trim();
-                    const recordSubject = (record.subject || '').toLowerCase().trim();
-                    
-                    // Skip if subject doesn't match exactly
-                    if (recordSubject !== filterSubject) {
-                        console.log('Skipping record - exact subject mismatch:', {
-                            recordSubject: record.subject,
-                            filterSubject: filters.subject,
-                            exactMatch: false,
-                            recordKey: recordKey
-                        });
-                        return;
-                    }
-                }
-                
-                // Apply date filter SECOND - before collecting students
-                let recordDate;
-                try {
-                    // Handle different date formats
-                    if (record.date.includes('T')) {
-                        recordDate = new Date(record.date);
-                    } else {
-                        // Assume date is in YYYY-MM-DD format
-                        recordDate = new Date(record.date + 'T00:00:00');
-                    }
-                    
-                    // Validate parsed date
-                    if (isNaN(recordDate.getTime())) {
-                        console.warn('Invalid date found in record:', record.date, 'for key:', recordKey);
-                        return; // Skip invalid dates
-                    }
-                } catch (error) {
-                    console.warn('Error parsing date:', record.date, 'for key:', recordKey, error);
-                    return; // Skip records with unparseable dates
-                }
-                
-                const start = filters.startDate ? new Date(filters.startDate + 'T00:00:00') : null;
-                const end = filters.endDate ? new Date(filters.endDate + 'T23:59:59') : null;
-                
-                // Check if record date falls within filter range
-                const dateInRange = (!start || recordDate >= start) && (!end || recordDate <= end);
-                
-                if (!dateInRange) {
-                    console.log('Skipping record - date out of range:', {
-                        recordDate: record.date,
-                        startDate: filters.startDate,
-                        endDate: filters.endDate,
-                        recordKey: recordKey
-                    });
-                    return;
-                }
-                
-                // NOW collect students from this filtered record
+
                 if (record && record.students) {
+                    // Get lecture type from record
+                    const lectureType = record.lectureType || 'theory'; // default to theory if not specified
+                    
                     // Get teacher name from mapping - try multiple approaches
                     let teacherName = 'Unknown Teacher';
                     
@@ -2691,12 +3065,14 @@
 
                             filteredStudents++;
 
-                            // Create unique key for student-subject combination
-                            const studentSubjectKey = `${studentId}_${record.subject || 'unknown'}`;
+                            // Create key based on view mode
+                            const studentKey = currentViewMode === 'subject' 
+                                ? `${studentId}_${record.subject || 'unknown'}` 
+                                : studentId;
                             
-                            // Initialize student-subject record if not exists
-                            if (!studentAttendance[studentSubjectKey]) {
-                                studentAttendance[studentSubjectKey] = {
+                            // Initialize student record if not exists
+                            if (!studentAttendance[studentKey]) {
+                                studentAttendance[studentKey] = {
                                     id: studentId,
                                     name: student.name || `${student.firstName || ''} ${student.lastName || ''}`.trim(),
                                     rollNo: student.rollNo,
@@ -2704,8 +3080,13 @@
                                     departmentName: getDepartmentFullName(studentDepartmentCode),
                                     year: studentYear,
                                     division: studentDivision,
-                                    subject: record.subject || '-',
-                                    lectureType: record.lectureType || 'theory',
+                                    ...(currentViewMode === 'subject' && { subject: record.subject || '-' }),
+                                    theoryPresent: 0,
+                                    theoryAbsent: 0,
+                                    theoryTotal: 0,
+                                    practicalPresent: 0,
+                                    practicalAbsent: 0,
+                                    practicalTotal: 0,
                                     teacherName: (function() {
                                         // Always try to get the best possible teacher name
                                         let bestName = null;
@@ -2765,13 +3146,10 @@
                                     present: 0,
                                     absent: 0,
                                     total: 0,
-                                    dates: {},
-                                    latestDate: null,
-                                    allDates: []
+                                    dates: {}
                                 };
-                                console.log('Added student-subject:', {
-                                    name: studentAttendance[studentSubjectKey].name,
-                                    subject: record.subject,
+                                console.log('Added student:', {
+                                    name: studentAttendance[studentKey].name,
                                     department: studentDepartmentCode,
                                     year: studentYear,
                                     division: studentDivision
@@ -2782,119 +3160,51 @@
                 }
             });
 
-            console.log('Student collection and filtering summary:', {
+            console.log('Filtering summary:', {
                 totalStudents,
                 filteredStudents,
-                filters,
-                collectedStudentSubjects: Object.keys(studentAttendance).length
+                filters
             });
 
-            // Now process attendance data for the collected students (attendance counting)
-            console.log('Processing attendance data for collected students...');
-            
+            // Process attendance records for found students
             Object.entries(attendanceData).forEach(([key, record]) => {
-                // Skip if not the teacher's record
-                if (filters.teacherId && record.teacherId !== filters.teacherId) {
-                    return;
-                }
-                
                 if (!record.date || !record.students) {
                     return;
                 }
 
-                // Apply same filters as in student collection phase
-                // Apply subject filter - EXACT MATCH ONLY
-                if (filters.subject && filters.subject.trim() !== '') {
-                    const filterSubject = filters.subject.toLowerCase().trim();
-                    const recordSubject = (record.subject || '').toLowerCase().trim();
-                    
-                    if (recordSubject !== filterSubject) {
-                        return; // Skip - already logged in first phase
-                    }
+                // Apply subject filter if specified
+                if (filters.subject && record.subject && 
+                    !record.subject.toLowerCase().includes(filters.subject.toLowerCase())) {
+                    return;
                 }
 
-                // Apply date filter
-                let recordDate;
-                try {
-                    if (record.date.includes('T')) {
-                        recordDate = new Date(record.date);
-                    } else {
-                        recordDate = new Date(record.date + 'T00:00:00');
-                    }
-                    
-                    if (isNaN(recordDate.getTime())) {
-                        return; // Skip invalid dates
-                    }
-                } catch (error) {
-                    return; // Skip records with unparseable dates
-                }
-                
-                const start = filters.startDate ? new Date(filters.startDate + 'T00:00:00') : null;
-                const end = filters.endDate ? new Date(filters.endDate + 'T23:59:59') : null;
-                
-                // Check if record date falls within filter range
-                const dateInRange = (!start || recordDate >= start) && (!end || recordDate <= end);
-                
-                // Enhanced debug logging for date filtering
-                if (Math.random() < 0.1 || (filters.startDate || filters.endDate)) { // Log more when date filters are active
-                    console.log('Date filtering debug:', {
-                        recordKey: key,
-                        originalDate: record.date,
-                        parsedRecordDate: recordDate.toISOString(),
-                        recordDateOnly: recordDate.toISOString().split('T')[0],
-                        startFilter: filters.startDate,
-                        endFilter: filters.endDate,
-                        parsedStart: start ? start.toISOString() : null,
-                        parsedEnd: end ? end.toISOString() : null,
-                        dateInRange: dateInRange,
-                        subject: record.subject,
-                        studentsCount: record.students ? Object.keys(record.students).length : 0,
-                        comparison: {
-                            startCheck: !start ? 'no start filter' : (recordDate >= start ? 'PASS' : 'FAIL'),
-                            endCheck: !end ? 'no end filter' : (recordDate <= end ? 'PASS' : 'FAIL')
-                        }
-                    });
-                }
-                
-                if (dateInRange) {
+                const recordDate = new Date(record.date);
+                const start = filters.startDate ? new Date(filters.startDate) : null;
+                const end = filters.endDate ? new Date(filters.endDate) : null;
+
+                if ((!start || recordDate >= start) && (!end || recordDate <= end)) {
                     Object.entries(record.students).forEach(([studentId, status]) => {
-                        const studentSubjectKey = `${studentId}_${record.subject || 'unknown'}`;
-                        // Only process attendance for students that were collected in the first phase
-                        if (studentAttendance[studentSubjectKey]) {
-                            // Debug: Confirm we're only processing filtered students
-                            if (Math.random() < 0.05) {
-                                console.log('Processing attendance for filtered student:', {
-                                    studentId,
-                                    studentName: studentAttendance[studentSubjectKey].name,
-                                    subject: record.subject,
-                                    date: record.date,
-                                    studentSubjectKey
-                                });
-                            }
-                            studentAttendance[studentSubjectKey].total++;
+                        const studentKey = studentId;
+                        if (studentAttendance[studentKey]) {
+                            // Get lecture type from record
+                            const lectureType = record.lectureType || 'theory';
                             
-                            // Debug attendance processing
-                            if (Math.random() < 0.02) { // Log 2% of student records
-                                console.log('Processing student attendance:', {
-                                    studentId,
-                                    studentName: studentAttendance[studentSubjectKey].name,
-                                    subject: record.subject,
-                                    date: record.date,
-                                    status: status,
-                                    currentTotal: studentAttendance[studentSubjectKey].total,
-                                    currentPresent: studentAttendance[studentSubjectKey].present,
-                                    currentAbsent: studentAttendance[studentSubjectKey].absent
-                                });
+                            // Update total count based on lecture type
+                            if (lectureType.toLowerCase() === 'practical') {
+                                studentAttendance[studentKey].practicalTotal++;
+                            } else {
+                                studentAttendance[studentKey].theoryTotal++;
                             }
+                            
+                            // Overall total
+                            studentAttendance[studentKey].total++;
                             
                             // Enhanced status checking to handle all possible formats
-                            // Debug: Log status values to identify patterns
                             if (Math.random() < 0.01) { // Log 1% of records to avoid spam
                                 console.log('Attendance status debug:', {
                                     studentId,
                                     status,
-                                    statusType: typeof status,
-                                    statusValue: JSON.stringify(status),
+                                    lectureType,
                                     date: record.date,
                                     subject: record.subject
                                 });
@@ -2907,9 +3217,14 @@
                                     date: record.date,
                                     subject: record.subject
                                 });
-                                // Skip this record or treat as absent
-                                studentAttendance[studentSubjectKey].absent++;
-                                studentAttendance[studentSubjectKey].dates[record.date] = 'absent';
+                                // Treat as absent
+                                if (lectureType.toLowerCase() === 'practical') {
+                                    studentAttendance[studentKey].practicalAbsent++;
+                                } else {
+                                    studentAttendance[studentKey].theoryAbsent++;
+                                }
+                                studentAttendance[studentKey].absent++;
+                                studentAttendance[studentKey].dates[record.date] = 'absent';
                                 return;
                             }
                             
@@ -2927,25 +3242,24 @@
                             );
                             
                             if (isPresent) {
-                                studentAttendance[studentSubjectKey].present++;
+                                // Update theory/practical present count
+                                if (lectureType.toLowerCase() === 'practical') {
+                                    studentAttendance[studentKey].practicalPresent++;
+                                } else {
+                                    studentAttendance[studentKey].theoryPresent++;
+                                }
+                                studentAttendance[studentKey].present++;
                             } else {
-                                studentAttendance[studentSubjectKey].absent++;
+                                // Update theory/practical absent count
+                                if (lectureType.toLowerCase() === 'practical') {
+                                    studentAttendance[studentKey].practicalAbsent++;
+                                } else {
+                                    studentAttendance[studentKey].theoryAbsent++;
+                                }
+                                studentAttendance[studentKey].absent++;
                             }
                             
-                            studentAttendance[studentSubjectKey].dates[record.date] = status;
-                            
-                            // Track all dates and find the latest one
-                            if (!studentAttendance[studentSubjectKey].allDates.includes(record.date)) {
-                                studentAttendance[studentSubjectKey].allDates.push(record.date);
-                            }
-                            
-                            // Update latest date
-                            if (!studentAttendance[studentSubjectKey].latestDate || 
-                                new Date(record.date) > new Date(studentAttendance[studentSubjectKey].latestDate)) {
-                                studentAttendance[studentSubjectKey].latestDate = record.date;
-                            }
-                            
-                            // Subject is already set during initialization
+                            studentAttendance[studentKey].dates[record.date] = status;
                         }
                     });
                 }
@@ -2953,88 +3267,15 @@
 
             // Convert to array and calculate percentages
             let students = Object.values(studentAttendance).map(student => {
-                // Filter attendance dates to only include those within the selected date range
-                if (filters.startDate || filters.endDate) {
-                    const filteredDates = {};
-                    let filteredPresent = 0;
-                    let filteredAbsent = 0;
-                    let filteredTotal = 0;
-                    let filteredAllDates = [];
-                    let filteredLatestDate = null;
-                    
-                    const start = filters.startDate ? new Date(filters.startDate + 'T00:00:00') : null;
-                    const end = filters.endDate ? new Date(filters.endDate + 'T23:59:59') : null;
-                    
-                    // Process each attendance date
-                    Object.entries(student.dates).forEach(([date, status]) => {
-                        let recordDate;
-                        try {
-                            recordDate = date.includes('T') ? new Date(date) : new Date(date + 'T00:00:00');
-                            
-                            if (isNaN(recordDate.getTime())) {
-                                return; // Skip invalid dates
-                            }
-                            
-                            // Check if date is within range
-                            const dateInRange = (!start || recordDate >= start) && (!end || recordDate <= end);
-                            
-                            if (dateInRange) {
-                                filteredDates[date] = status;
-                                filteredAllDates.push(date);
-                                filteredTotal++;
-                                
-                                // Count present/absent for this date
-                                const isPresent = (
-                                    status === true || 
-                                    status === 'true' ||
-                                    status === 'present' || 
-                                    status === 'Present' || 
-                                    status === 'PRESENT' ||
-                                    status === 'P' ||
-                                    status === 'p' ||
-                                    status === 1 ||
-                                    status === '1' ||
-                                    (typeof status === 'string' && status.toLowerCase().trim() === 'present')
-                                );
-                                
-                                if (isPresent) {
-                                    filteredPresent++;
-                                } else {
-                                    filteredAbsent++;
-                                }
-                                
-                                // Update latest date
-                                if (!filteredLatestDate || recordDate > new Date(filteredLatestDate)) {
-                                    filteredLatestDate = date;
-                                }
-                            }
-                        } catch (error) {
-                            console.warn('Error processing date:', date, error);
-                        }
-                    });
-                    
-                    // Update student data with filtered values
-                    student.dates = filteredDates;
-                    student.present = filteredPresent;
-                    student.absent = filteredAbsent;
-                    student.total = filteredTotal;
-                    student.allDates = filteredAllDates;
-                    student.latestDate = filteredLatestDate;
-                    
-                    console.log('Date filtered student:', {
-                        name: student.name,
-                        subject: student.subject,
-                        originalTotal: Object.keys(student.dates).length + filteredTotal,
-                        filteredTotal: filteredTotal,
-                        dateRange: `${filters.startDate} to ${filters.endDate}`,
-                        filteredDates: Object.keys(filteredDates)
-                    });
-                }
-                
                 const percentage = student.total > 0 ? ((student.present / student.total) * 100) : 0;
+                const theoryPercentage = student.theoryTotal > 0 ? ((student.theoryPresent / student.theoryTotal) * 100) : 0;
+                const practicalPercentage = student.practicalTotal > 0 ? ((student.practicalPresent / student.practicalTotal) * 100) : 0;
+                
                 return {
                     ...student,
-                    percentage
+                    percentage,
+                    theoryPercentage,
+                    practicalPercentage
                 };
             });
             
@@ -3054,20 +3295,6 @@
                     percentage: s.percentage.toFixed(1)
                 }))
             });
-
-            // Filter out students with no attendance in the selected date range
-            if (filters.startDate || filters.endDate) {
-                const beforeDateFilter = students.length;
-                students = students.filter(student => student.total > 0);
-                const afterDateFilter = students.length;
-                
-                console.log('Date range filtering results:', {
-                    beforeFilter: beforeDateFilter,
-                    afterFilter: afterDateFilter,
-                    removed: beforeDateFilter - afterDateFilter,
-                    dateRange: `${filters.startDate || 'any'} to ${filters.endDate || 'any'}`
-                });
-            }
 
             // Apply percentage filter if selected
             const percentageFilter = document.getElementById('percentageFilter').value;
@@ -3182,9 +3409,10 @@
             // Show loading state in table
             const tableBody = document.getElementById('attendanceTableBody');
             if (tableBody) {
+                const colSpan = currentViewMode === 'subject' ? '9' : '16';
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="11" class="text-center p-4">
+                        <td colspan="${colSpan}" class="text-center p-4">
                             <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
                             <p>Loading attendance records...</p>
                         </td>
@@ -3196,9 +3424,10 @@
         function showError(error) {
             const tableBody = document.getElementById('attendanceTableBody');
             if (tableBody) {
+                const colSpan = currentViewMode === 'subject' ? '9' : '16';
                 tableBody.innerHTML = `
                         <tr>
-                        <td colspan="11" class="text-center p-4">
+                        <td colspan="${colSpan}" class="text-center p-4">
                             <i class="fas fa-exclamation-circle text-danger fa-2x mb-3"></i>
                             <p>Error loading attendance data</p>
                             <p class="text-muted small">${error.message}</p>
@@ -3208,154 +3437,12 @@
             }
         }
 
-        // Function to update table display based on report type
-        function updateTable(students) {
-            const tableBody = document.getElementById('attendanceTableBody');
-            const tableHeader = document.querySelector('.attendance-table thead tr');
-            const reportType = document.getElementById('reportType').value;
-            
-            if (!tableBody) {
-                console.error('Table body not found');
-                return;
-            }
-            
-            // Update table headers based on report type
-            if (reportType === 'consolidated') {
-                tableHeader.innerHTML = `
-                    <th width="40"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()"></th>
-                    <th>Roll No</th>
-                    <th>Student Name</th>
-                    <th>Department</th>
-                    <th>Year</th>
-                    <th>Division</th>
-                    <th>Subjects Attended</th>
-                    <th>Total Classes</th>
-                    <th>Present</th>
-                    <th>Absent</th>
-                    <th>Attendance %</th>
-                    <th>Status</th>
-                `;
-            } else {
-                tableHeader.innerHTML = `
-                    <th width="40"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()"></th>
-                    <th>Roll No</th>
-                    <th>Student Name</th>
-                    <th>Department</th>
-                    <th>Year</th>
-                    <th>Division</th>
-                    <th>Subject</th>
-                    <th>Lecture Type</th>
-                    <th>Date Taken</th>
-                    <th>Status</th>
-                    <th>Attendance %</th>
-                    <th>Actions</th>
-                `;
-            }
-            
-            if (students.length === 0) {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="12" class="text-center p-4">
-                            <i class="fas fa-info-circle text-info fa-2x mb-3"></i>
-                            <p>No students found matching the selected criteria</p>
-                            <p class="text-muted small">Try adjusting your filters</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            // Generate table rows based on report type
-            let tableHTML = '';
-            
-            students.forEach(student => {
-                const statusClass = student.percentage >= 75 ? 'good' : student.percentage >= 60 ? 'low' : 'critical';
-                const statusText = student.percentage >= 75 ? 'Good' : student.percentage >= 60 ? 'Low' : 'Critical';
-                
-                if (reportType === 'consolidated') {
-                    tableHTML += `
-                        <tr>
-                            <td><input type="checkbox" class="student-checkbox" value="${student.id}" onchange="toggleStudent('${student.id}', this.checked)"></td>
-                            <td><span class="student-roll">${student.rollNo || '-'}</span></td>
-                            <td>
-                                <div class="student-info">
-                                    <div class="student-roll">${(student.rollNo || 'N/A').toString().slice(-2)}</div>
-                                    <div class="student-details">
-                                        <div class="student-name">${student.name}</div>
-                                        <div class="student-meta">
-                                            <span><i class="fas fa-id-card"></i> ${student.id}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>${student.departmentName || student.department}</td>
-                            <td>${student.year}</td>
-                            <td>${student.division}</td>
-                            <td><small>${student.subjects}</small></td>
-                            <td><span class="attendance-count total"><i class="fas fa-calendar"></i> ${student.total}</span></td>
-                            <td><span class="attendance-count present"><i class="fas fa-check"></i> ${student.present}</span></td>
-                            <td><span class="attendance-count absent"><i class="fas fa-times"></i> ${student.absent}</span></td>
-                            <td><span class="attendance-percentage">${student.percentage.toFixed(1)}%</span></td>
-                            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                        </tr>
-                    `;
-                } else {
-                    tableHTML += `
-                        <tr>
-                            <td><input type="checkbox" class="student-checkbox" value="${student.id}" onchange="toggleStudent('${student.id}', this.checked)"></td>
-                            <td><span class="student-roll">${student.rollNo || '-'}</span></td>
-                            <td>
-                                <div class="student-info">
-                                    <div class="student-roll">${(student.rollNo || 'N/A').toString().slice(-2)}</div>
-                                    <div class="student-details">
-                                        <div class="student-name">${student.name}</div>
-                                        <div class="student-meta">
-                                            <span><i class="fas fa-id-card"></i> ${student.id}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>${student.departmentName || student.department}</td>
-                            <td>${student.year}</td>
-                            <td>${student.division}</td>
-                            <td>${student.subject || '-'}</td>
-                            <td>${student.lectureType || 'Theory'}</td>
-                            <td>${student.latestDate ? new Date(student.latestDate).toLocaleDateString() : '-'}</td>
-                            <td>
-                                <span class="attendance-count present"><i class="fas fa-check"></i> ${student.present}</span>
-                                <span class="attendance-count absent"><i class="fas fa-times"></i> ${student.absent}</span>
-                                <span class="attendance-count total"><i class="fas fa-calendar"></i> ${student.total}</span>
-                            </td>
-                            <td><span class="attendance-percentage">${student.percentage.toFixed(1)}%</span></td>
-                            <td>
-                                <button class="btn btn-sm btn-primary" onclick="editStudent('${student.id}')">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                }
-            });
-            
-            tableBody.innerHTML = tableHTML;
-            
-            // Store current data for export
-            currentFilteredStudents = students;
-            
-            console.log('Table updated with', students.length, 'students for report type:', reportType);
-        }
-
         // Add these new functions for selection handling
         let selectedStudents = new Set();
 
         function toggleSelectAll() {
             const checkboxes = document.querySelectorAll('.student-checkbox');
-            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-            
-            if (!selectAllCheckbox) {
-                console.error('Select all checkbox not found');
-                return;
-            }
+            const selectAllCheckbox = document.getElementById('selectAll');
             
             checkboxes.forEach(checkbox => {
                 checkbox.checked = selectAllCheckbox.checked;
@@ -3378,477 +3465,123 @@
             
             // Update select all checkbox
             const allCheckboxes = document.querySelectorAll('.student-checkbox');
-            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-            if (selectAllCheckbox) {
-                selectAllCheckbox.checked = selectedStudents.size === allCheckboxes.length;
-            }
+            const selectAllCheckbox = document.getElementById('selectAll');
+            selectAllCheckbox.checked = selectedStudents.size === allCheckboxes.length;
             
             updateDeleteButton();
         }
 
         function updateDeleteButton() {
             const deleteBtn = document.querySelector('button[onclick="confirmDeleteAllAttendance()"]');
-            if (deleteBtn) {
-                if (selectedStudents.size > 0) {
-                    deleteBtn.innerHTML = `<i class="fas fa-trash"></i> Delete Selected (${selectedStudents.size})`;
-                } else {
-                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Delete All Attendance';
-                }
-            }
-        }
-        
-        function confirmDeleteAllAttendance() {
-            if (selectedStudents.size === 0) {
-                alert('Please select at least one student to delete.');
-                return;
-            }
-            
-            const confirmMsg = `Are you sure you want to delete attendance records for ${selectedStudents.size} selected student(s)?\n\nThis action cannot be undone.`;
-            
-            if (confirm(confirmMsg)) {
-                deleteSelectedAttendance();
-            }
-        }
-        
-        function deleteSelectedAttendance() {
-            if (selectedStudents.size === 0) return;
-            
-            console.log('Deleting attendance for students:', Array.from(selectedStudents));
-            
-            // Show loading state
-            const deleteBtn = document.querySelector('button[onclick="confirmDeleteAllAttendance()"]');
-            if (deleteBtn) {
-                deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
-                deleteBtn.disabled = true;
-            }
-            
-            // Here you would implement the actual deletion logic
-            // For now, just show a success message
-            setTimeout(() => {
-                alert(`Successfully deleted attendance records for ${selectedStudents.size} students.`);
-                
-                // Clear selection
-                selectedStudents.clear();
-                
-                // Reset checkboxes
-                document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = false);
-                const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-                if (selectAllCheckbox) selectAllCheckbox.checked = false;
-                
-                // Reset delete button
-                if (deleteBtn) {
-                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Delete All Attendance';
-                    deleteBtn.disabled = false;
-                }
-                
-                // Reload data
-                loadReports();
-            }, 1000);
-        }
-        
-        // Edit Student Attendance Functions
-        let currentEditingStudent = null;
-        let attendanceChanges = {};
-        
-        // Make editStudent globally accessible
-        window.editStudent = function(studentId) {
-            try {
-                editStudentInternal(studentId);
-            } catch (error) {
-                console.error('Error in editStudent:', error);
-                alert('Error opening edit modal: ' + error.message);
-            }
-        };
-        
-        function editStudentInternal(studentId) {
-            console.log('=== EDIT STUDENT CLICKED ===');
-            console.log('Student ID:', studentId);
-            console.log('Current filtered students:', currentFilteredStudents);
-            console.log('Student IDs available:', currentFilteredStudents.map(s => s.id));
-            
-            // Find student in current filtered data
-            const student = currentFilteredStudents.find(s => s.id === studentId);
-            console.log('Found student:', student);
-            
-            if (!student) {
-                console.error('Student not found! Available IDs:', currentFilteredStudents.map(s => s.id));
-                alert('Student not found!');
-                return;
-            }
-            
-            currentEditingStudent = student;
-            attendanceChanges = {};
-            
-            // Populate modal with student info
-            document.getElementById('editStudentName').textContent = student.name;
-            document.getElementById('editStudentDetails').textContent = 
-                `Roll No: ${student.rollNo} | Department: ${student.department} | Year: ${student.year} | Division: ${student.division}`;
-            
-            // Load attendance records for this student
-            loadStudentAttendanceRecords(student);
-            
-            // Show modal
-            document.getElementById('editStudentModal').style.display = 'block';
-        }
-        
-        function loadStudentAttendanceRecords(student) {
-            const recordsList = document.getElementById('attendanceRecordsList');
-            
-            if (!student.dates || Object.keys(student.dates).length === 0) {
-                recordsList.innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: #6b7280;">
-                        <i class="fas fa-calendar-times" style="font-size: 2rem; margin-bottom: 10px;"></i>
-                        <p>No attendance records found for this student.</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            // Convert dates object to array and sort by date
-            const attendanceRecords = Object.entries(student.dates)
-                .map(([date, status]) => ({ date, status }))
-                .sort((a, b) => new Date(b.date) - new Date(a.date)); // Latest first
-            
-            recordsList.innerHTML = attendanceRecords.map(record => {
-                const recordId = `${student.id}_${record.date}`;
-                const isPresent = record.status === 'present';
-                
-                return `
-                    <div class="record-item" data-record-id="${recordId}">
-                        <div class="record-info">
-                            <div class="record-date">${formatDate(record.date)}</div>
-                            <div class="record-subject">${student.subject} - ${student.lectureType}</div>
-                        </div>
-                        <div class="attendance-toggle">
-                            <button class="toggle-btn present ${isPresent ? 'active' : ''}" 
-                                    onclick="toggleAttendance('${recordId}', 'present')">
-                                <i class="fas fa-check"></i> Present
-                            </button>
-                            <button class="toggle-btn absent ${!isPresent ? 'active' : ''}" 
-                                    onclick="toggleAttendance('${recordId}', 'absent')">
-                                <i class="fas fa-times"></i> Absent
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        function toggleAttendance(recordId, newStatus) {
-            const recordItem = document.querySelector(`[data-record-id="${recordId}"]`);
-            if (!recordItem) return;
-            
-            // Update UI
-            const presentBtn = recordItem.querySelector('.toggle-btn.present');
-            const absentBtn = recordItem.querySelector('.toggle-btn.absent');
-            
-            presentBtn.classList.toggle('active', newStatus === 'present');
-            absentBtn.classList.toggle('active', newStatus === 'absent');
-            
-            // Store change
-            attendanceChanges[recordId] = newStatus;
-            
-            console.log('Attendance change recorded:', recordId, newStatus);
-        }
-        
-        function saveAttendanceChanges() {
-            if (Object.keys(attendanceChanges).length === 0) {
-                alert('No changes to save.');
-                return;
-            }
-            
-            const confirmMsg = `Save ${Object.keys(attendanceChanges).length} attendance changes?`;
-            if (!confirm(confirmMsg)) return;
-            
-            // Show loading state
-            const saveBtn = document.querySelector('button[onclick="saveAttendanceChanges()"]');
-            if (saveBtn) {
-                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-                saveBtn.disabled = true;
-            }
-            
-            console.log('Saving attendance changes:', attendanceChanges);
-            
-            // Here you would implement the actual save logic to Firebase
-            // For now, simulate save with timeout
-            setTimeout(() => {
-                alert(`Successfully updated ${Object.keys(attendanceChanges).length} attendance records.`);
-                
-                // Reset state
-                attendanceChanges = {};
-                currentEditingStudent = null;
-                
-                // Close modal
-                closeEditModal();
-                
-                // Reload data
-                loadReports();
-            }, 1500);
-        }
-        
-        function closeEditModal() {
-            document.getElementById('editStudentModal').style.display = 'none';
-            currentEditingStudent = null;
-            attendanceChanges = {};
-        }
-        
-        function closeDeleteModal() {
-            document.getElementById('deleteConfirmModal').style.display = 'none';
-        }
-        
-        // Make functions globally accessible
-        window.closeEditModal = closeEditModal;
-        window.closeDeleteModal = closeDeleteModal;
-        window.saveAttendanceChanges = saveAttendanceChanges;
-        window.toggleAttendance = toggleAttendance;
-        
-        // Test function
-        window.testEditFunction = function() {
-            console.log('=== TEST EDIT FUNCTION ===');
-            console.log('Current filtered students:', currentFilteredStudents);
-            
-            if (currentFilteredStudents.length > 0) {
-                const firstStudent = currentFilteredStudents[0];
-                console.log('Testing with first student:', firstStudent);
-                window.editStudent(firstStudent.id);
-            } else {
-                alert('No students available to test with. Please load some data first.');
-            }
-        };
-        
-        function formatDate(dateStr) {
-            try {
-                const date = new Date(dateStr);
-                return date.toLocaleDateString('en-GB', {
-                    day: '2-digit',
-                    month: '2-digit', 
-                    year: 'numeric'
-                });
-            } catch (e) {
-                return dateStr;
-            }
-        }
-        
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const editModal = document.getElementById('editStudentModal');
-            const deleteModal = document.getElementById('deleteConfirmModal');
-            
-            if (event.target === editModal) {
-                closeEditModal();
-            }
-            if (event.target === deleteModal) {
-                closeDeleteModal();
-            }
-        }
+            if (selectedStudents.size > 0) {
+                deleteBtn.innerHTML = `<i class="fas fa-trash"></i> Delete Selected (${selectedStudents.size})`;
 
-        // Update the updateTable function to include checkboxes
-        function updateTable(students) {
-            const tableBody = document.getElementById('attendanceTableBody');
-            if (!tableBody) return;
+function updateDeleteButton() {
+    const deleteBtn = document.querySelector('button[onclick="confirmDeleteAllAttendance()"]');
+    if (selectedStudents.size > 0) {
+        deleteBtn.innerHTML = `<i class="fas fa-trash"></i> Delete Selected (${selectedStudents.size})`;
+    } else {
+        deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Delete All Attendance';
+    }
+}
 
-            // Store current data for export functions
-            currentFilteredStudents = students;
-
-            if (students.length === 0) {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="12" class="text-center" style="padding: 40px;">
-                            <i class="fas fa-folder-open" style="font-size: 48px; color: #9CA3AF; margin-bottom: 16px;"></i>
-                            <p style="color: #4B5563; font-size: 1.1rem; font-weight: 500;">No attendance records found</p>
-                            <p style="color: #6B7280; font-size: 0.95rem;">Try changing the filters or selecting a different date range</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            // Sort students by roll number
-            students.sort((a, b) => {
-                // Extract numeric and non-numeric parts
-                const splitRoll = roll => {
-                    const match = (roll || '').match(/^([A-Za-z]*)(\d*)/);
-                    return match ? [match[1].toLowerCase(), parseInt(match[2]) || 0] : ['', 0];
-                };
-                
-                const [prefixA, numA] = splitRoll(a.rollNo);
-                const [prefixB, numB] = splitRoll(b.rollNo);
-                
-                // First compare prefixes
-                if (prefixA !== prefixB) {
-                    return prefixA.localeCompare(prefixB);
-                }
-                
-                // Then compare numbers
-                return numA - numB;
-            });
-
-            console.log('Updating table with students:', students.map(s => ({
-                name: s.name,
-                rollNo: s.rollNo,
-                teacherName: s.teacherName
-            })));
-
-            tableBody.innerHTML = students.map(student => {
-                const percentage = student.total > 0 
-                    ? ((student.present / student.total) * 100).toFixed(1) 
-                    : '0.0';
-                
-                let statusClass = 'good';
-                let statusText = 'Good';
-                
-                if (percentage < 50) {
-                    statusClass = 'critical';
-                    statusText = 'Critical';
-                } else if (percentage < 75) {
-                    statusClass = 'low';
-                    statusText = 'Warning';
-                }
-
-                // Calculate total lectures and attendance stats
-                const totalLectures = student.present + student.absent;
-                const presentPercentage = ((student.present / totalLectures) * 100).toFixed(1);
-                const absentPercentage = ((student.absent / totalLectures) * 100).toFixed(1);
-
-                return `
-                    <tr>
-                        <td>
-                            <input type="checkbox" 
-                                class="student-checkbox" 
-                                value="${student.id}"
-                                ${selectedStudents.has(student.id) ? 'checked' : ''}
-                                onchange="toggleStudent('${student.id}', this.checked)">
-                        </td>
-                        <td>${student.rollNo || '-'}</td>
-                        <td>${student.name || '-'}</td>
-                        <td>${student.departmentName || getDepartmentFullName(student.department) || '-'}</td>
-                        <td>${student.year || '-'}</td>
-                        <td>${student.division || '-'}</td>
-                        <td>${student.subject || '-'}</td>
-                        <td><span style="background: ${student.lectureType === 'practical' ? '#e3f2fd' : '#f3e5f5'}; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; color: ${student.lectureType === 'practical' ? '#1565c0' : '#7b1fa2'};">${student.lectureType || 'Theory'}</span></td>
-                        <td>
-                            <span style="background: #f0f9ff; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: 500;">
-                                ${student.latestDate ? new Date(student.latestDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
-                            </span>
-                            ${student.allDates && student.allDates.length > 1 ? 
-                                `<br><small style="color: #6b7280; font-size: 0.75em;">${student.allDates.length} sessions</small>` : ''}
-                        </td>
-                        <td>
-                            <span class="attendance-status" style="padding: 6px 12px; border-radius: 6px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; ${student.present > student.absent ? 'background: #dcfce7; color: #166534;' : 'background: #fef2f2; color: #dc2626;'}">
-                                <i class="fas ${student.present > student.absent ? 'fa-check' : 'fa-times'}"></i>
-                                ${student.present > student.absent ? 'Present' : 'Absent'}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="status-badge ${statusClass}">
-                                <i class="fas ${percentage >= 75 ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
-                                ${statusText}
-                            </span>
-                        </td>
-                        <td>
-                            <button class="btn btn-sm btn-primary" onclick="editStudent('${student.id}')" title="Edit Student">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        // Store current filtered data for export functions
-        let currentFilteredStudents = [];
-        
-        function showLoadingState() {
-            // Show loading state in table
-            const tableBody = document.getElementById('attendanceTableBody');
-            if (tableBody) {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="12" class="text-center" style="padding: 40px;">
-                            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #4F46E5; margin-bottom: 16px;"></i>
-                            <p style="color: #4B5563; font-size: 1.1rem; font-weight: 500;">Loading attendance records...</p>
-                        </td>
-                    </tr>
-                `;
-            }
-        }
-        
-        function showError(error) {
-            console.error('Error:', error);
-            const tableBody = document.getElementById('attendanceTableBody');
-            if (tableBody) {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="12" class="text-center" style="padding: 40px;">
-                            <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: #EF4444; margin-bottom: 16px;"></i>
-                            <p style="color: #DC2626; font-size: 1.1rem; font-weight: 500;">Error loading data</p>
-                            <p style="color: #6B7280; font-size: 0.95rem;">${error.message || 'Please try again later'}</p>
-                        </td>
-                    </tr>
-                `;
-            }
-        }
+// Robust updateTable function for dual view attendance reports
+function updateTable(students) {
+    const tableBody = document.getElementById('attendanceTableBody');
+    if (!tableBody) return;
+    currentFilteredStudents = students;
+    if (!Array.isArray(students) || students.length === 0) {
+        const colSpan = currentViewMode === 'subject' ? 4 : 16;
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="${colSpan}" class="text-center" style="padding: 40px;">
+                    No attendance records found.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    let rows = '';
+    if (currentViewMode === 'subject') {
+        students.forEach(row => {
+            rows += `
+                <tr>
+                    <td>${row.subject || '-'}</td>
+                    <td>${row.date || '-'}</td>
+                    <td class="attendance-count present">${row.present || 0}</td>
+                    <td class="attendance-count absent">${row.absent || 0}</td>
+                </tr>
+            `;
+        });
+    } else {
+        students.forEach(student => {
+            const theoryPercentage = student.theoryTotal > 0 ? ((student.theoryPresent / student.theoryTotal) * 100).toFixed(1) : '0.0';
+            const practicalPercentage = student.practicalTotal > 0 ? ((student.practicalPresent / student.practicalTotal) * 100).toFixed(1) : '0.0';
+            const percentage = student.total > 0 ? ((student.present / student.total) * 100).toFixed(1) : '0.0';
+            const getPercentageClass = (perc) => {
+                perc = parseFloat(perc);
+                if (perc >= 75) return 'percentage-good';
+                if (perc >= 50) return 'percentage-warning';
+                return 'percentage-danger';
+            };
+            rows += `
+                <tr>
+                    <td><input type="checkbox" class="student-checkbox" value="${student.id || ''}" ${selectedStudents && selectedStudents.has && selectedStudents.has(student.id) ? 'checked' : ''} onchange="toggleStudent('${student.id}', this.checked)"></td>
+                    <td>${student.rollNo || '-'}</td>
+                    <td>${student.name || '-'}</td>
+                    <td>${student.departmentName || getDepartmentFullName(student.department) || '-'}</td>
+                    <td>${student.year || '-'}</td>
+                    <td>${student.division || '-'}</td>
+                    <td class="theory-data text-success" style="font-weight: bold;">${student.theoryPresent || 0}</td>
+                    <td class="theory-data text-danger" style="font-weight: bold;">${student.theoryAbsent || 0}</td>
+                    <td class="theory-data">${theoryTotal}</td>
+                    <td class="theory-data ${getPercentageClass(theoryPercentage)}">${theoryPercentage}%</td>
+                    <td class="practical-data text-success" style="font-weight: bold;">${student.practicalPresent || 0}</td>
+                    <td class="practical-data text-danger" style="font-weight: bold;">${student.practicalAbsent || 0}</td>
+                    <td class="practical-data">${practicalTotal}</td>
+                    <td class="practical-data ${getPercentageClass(practicalPercentage)}">${practicalPercentage}%</td>
+                    <td class="${getPercentageClass(percentage)}" style="font-weight: bold;">${percentage}%</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="editStudent('${student.id}')" title="Edit Student">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+    tableBody.innerHTML = rows;
+}
 
         function getCurrentFilteredData() {
             return currentFilteredStudents;
         }
 
         function exportToExcel() {
-            console.log('🔥 Export button clicked!');
             const students = getCurrentFilteredData();
-            console.log('📊 Students data:', students);
-            
             if (!students || students.length === 0) {
-                console.log('❌ No students data found');
-                alert('No data to export. Please load reports first!');
+                alert('No data to export');
                 return;
             }
-            
-            console.log('✅ Found', students.length, 'students to export');
-            
-            // Check if XLSX is available
-            if (typeof XLSX === 'undefined') {
-                console.error('❌ XLSX library not loaded!');
-                alert('Export library not loaded. Please refresh the page.');
-                return;
-            }
-            
-            console.log('✅ XLSX library is available');
-            
-            try {
 
             // Create workbook
             const wb = XLSX.utils.book_new();
             
             // Prepare data for export
-            const exportData = students.map(student => {
-                // Get full department name
-                const fullDeptName = getDepartmentFullName(student.department) || student.departmentName || student.department || '';
-                
-                // Calculate percentage if we have present/absent data
-                let attendancePercentage = '';
-                if (student.present !== undefined && student.absent !== undefined) {
-                    const total = student.present + student.absent;
-                    if (total > 0) {
-                        attendancePercentage = ((student.present / total) * 100).toFixed(1) + '%';
-                    }
-                } else if (student.total && student.present !== undefined) {
-                    attendancePercentage = ((student.present / student.total) * 100).toFixed(1) + '%';
-                }
-                
-                return {
-                    'Roll No': student.rollNo || '',
-                    'Name': student.name || '',
-                    'Department': fullDeptName,
-                    'Year': student.year || '',
-                    'Division': student.division || '',
-                    'Subject': student.subject || '',
-                    'Lecture Type': student.lectureType || '',
-                    'Teacher': student.teacherName || student.teacher || '',
-                    'Attendance Status': student.attendanceStatus || (student.present > student.absent ? 'Present' : 'Absent'),
-                    'Attendance %': attendancePercentage
-                };
-            });
+            const exportData = students.map(student => ({
+                'Roll No': student.rollNo,
+                'Name': student.name,
+                'Department': student.department,
+                'Year': student.year,
+                'Division': student.division,
+                'Subject': student.subject,
+                'Teacher': student.teacherName,
+                'Present': student.present,
+                'Absent': student.absent,
+                'Total': student.total,
+                'Attendance %': student.percentage.toFixed(1) + '%'
+            }));
 
             // Create worksheet
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -3865,40 +3598,15 @@
 
             // Generate Excel file
             const date = new Date().toLocaleDateString().replace(/\//g, '-');
-            const filename = `Attendance_Report_${date}.xlsx`;
-            console.log('📁 Generating file:', filename);
-            
-            XLSX.writeFile(wb, filename);
-            console.log('✅ Export completed successfully!');
-            alert('Report exported successfully!');
-            
-            } catch (error) {
-                console.error('❌ Export failed:', error);
-                alert('Export failed: ' + error.message);
-            }
+            XLSX.writeFile(wb, `Attendance_Report_${date}.xlsx`);
         }
 
         // PDF export function removed as per user request
         // function exportToPDF() { ... }
 
         function getCurrentFilteredData() {
-            console.log('📊 Getting current filtered data...');
-            
-            // Use the stored currentFilteredStudents array instead of parsing table
-            if (currentFilteredStudents && currentFilteredStudents.length > 0) {
-                console.log('✅ Using stored filtered students:', currentFilteredStudents.length);
-                return currentFilteredStudents;
-            }
-            
-            console.log('⚠️ No stored data, trying to parse table...');
-            
-            // Fallback: Get the current filtered data from the table
+            // Get the current filtered data from the table
             const tableBody = document.getElementById('attendanceTableBody');
-            if (!tableBody) {
-                console.log('❌ Table body not found');
-                return [];
-            }
-            
             const rows = tableBody.getElementsByTagName('tr');
             const students = [];
             
@@ -3906,39 +3614,34 @@
                 const cells = row.getElementsByTagName('td');
                 if (cells.length === 0) continue; // Skip if no cells (like in loading/error state)
                 
-                try {
-                    // Get text content of cells (updated for new table structure)
-                    const rollNo = cells[1] ? cells[1].textContent.trim() : '';
-                    const name = cells[2] ? cells[2].textContent.trim() : '';
-                    const department = cells[3] ? cells[3].textContent.trim() : '';
-                    const year = cells[4] ? cells[4].textContent.trim() : '';
-                    const division = cells[5] ? cells[5].textContent.trim() : '';
-                    const subject = cells[6] ? cells[6].textContent.trim() : '';
-                    const lectureType = cells[7] ? cells[7].textContent.trim() : '';
-                    const attendanceStatus = cells[8] ? cells[8].textContent.trim() : '';
-                    
-                    // Extract checkbox value for ID
-                    const checkbox = cells[0] ? cells[0].querySelector('.student-checkbox') : null;
-                    const id = checkbox ? checkbox.value : `${rollNo}_${name}`;
-                    
-                    students.push({
-                        id,
-                        rollNo,
-                        name,
-                        department,
-                        year,
-                        division,
-                        subject,
-                        lectureType,
-                        attendanceStatus,
-                        // For export compatibility
-                        present: attendanceStatus.includes('Present') ? 1 : 0,
-                        absent: attendanceStatus.includes('Absent') ? 1 : 0
-                    });
-                } catch (error) {
-                    console.error('Error parsing row:', error);
-                    continue;
-                }
+                // Get text content of cells
+                const rollNo = cells[1].textContent.trim();
+                const name = cells[2].textContent.trim();
+                const department = cells[3].textContent.trim();
+                const year = cells[4].textContent.trim();
+                const division = cells[5].textContent.trim();
+                const subject = cells[6].textContent.trim();
+                const teacherName = cells[7].textContent.trim();
+                const presentMatch = (cells[8].textContent || '').match(/\d+/);
+                const absentMatch = (cells[9].textContent || '').match(/\d+/);
+                const present = parseInt(presentMatch ? presentMatch[0] : '0');
+                const absent = parseInt(absentMatch ? absentMatch[0] : '0');
+                const percentage = parseFloat(cells[10].textContent);
+                
+                students.push({
+                    id: cells[0].querySelector('.student-checkbox').value, // Use the checkbox value as the ID
+                    rollNo,
+                    name,
+                    department,
+                    year,
+                    division,
+                    subject,
+                    teacherName,
+                    present,
+                    absent,
+                    total: present + absent,
+                    percentage
+                });
             }
             
             return students;
@@ -3953,222 +3656,11 @@
             document.getElementById('startDate').addEventListener('change', loadReports);
             document.getElementById('endDate').addEventListener('change', loadReports);
             document.getElementById('percentageFilter').addEventListener('change', loadReports);
-            document.getElementById('customPercentage').addEventListener('input', debounce(loadReports, 300));
+            document.getElementById('customPercentage').addEventListener('input', loadReports);
             
-            // Add subject filter event listener for dropdown change
-            const subjectSelect = document.getElementById('subject');
-            subjectSelect.addEventListener('change', loadReports); // Immediate on selection change
-            
-            // Add report type change listener
-            const reportTypeSelect = document.getElementById('reportType');
-            reportTypeSelect.addEventListener('change', function() {
-                const subjectGroup = subjectSelect.closest('.form-group');
-                if (this.value === 'consolidated') {
-                    // Hide subject filter for consolidated reports
-                    subjectGroup.style.display = 'none';
-                    subjectSelect.value = ''; // Clear subject selection
-                } else {
-                    // Show subject filter for subject-wise reports
-                    subjectGroup.style.display = 'block';
-                }
-                loadReports();
-            });
+            // Add new subject filter event listener
+            document.getElementById('subject').addEventListener('input', debounce(loadReports, 500));
         });
-
-        // Function to process consolidated attendance data for defaulter list
-        function processConsolidatedAttendance(attendanceData, studentsData, filters) {
-            console.log('Processing consolidated attendance for defaulter list...');
-            
-            const studentConsolidated = {};
-            
-            // Process all attendance records and consolidate by student
-            Object.entries(attendanceData).forEach(([recordKey, record]) => {
-                // Skip if not the teacher's record (if teacher filter is applied)
-                if (filters.teacherId && record.teacherId !== filters.teacherId) {
-                    return;
-                }
-                
-                if (!record || !record.students || !record.date) {
-                    return;
-                }
-                
-                // Apply date filter
-                let recordDate;
-                try {
-                    recordDate = record.date.includes('T') ? new Date(record.date) : new Date(record.date + 'T00:00:00');
-                    if (isNaN(recordDate.getTime())) {
-                        return;
-                    }
-                } catch (error) {
-                    return;
-                }
-                
-                const start = filters.startDate ? new Date(filters.startDate + 'T00:00:00') : null;
-                const end = filters.endDate ? new Date(filters.endDate + 'T23:59:59') : null;
-                const dateInRange = (!start || recordDate >= start) && (!end || recordDate <= end);
-                
-                if (!dateInRange) {
-                    return;
-                }
-                
-                // Process students in this record
-                Object.entries(record.students).forEach(([studentId, status]) => {
-                    if (!studentsData[studentId]) {
-                        return;
-                    }
-                    
-                    const student = studentsData[studentId];
-                    
-                    // Apply department, year, division filters
-                    const studentDepartment = student.department || student.branch || '-';
-                    const studentDepartmentCode = getDepartmentCode(studentDepartment);
-                    const studentYear = getYearCode(student.year || '-');
-                    const studentDivision = student.division || '-';
-                    
-                    if (filters.department && studentDepartmentCode !== filters.department) {
-                        return;
-                    }
-                    if (filters.year && studentYear !== filters.year) {
-                        return;
-                    }
-                    if (filters.division && studentDivision !== filters.division) {
-                        return;
-                    }
-                    
-                    // Initialize student record if not exists
-                    if (!studentConsolidated[studentId]) {
-                        studentConsolidated[studentId] = {
-                            id: studentId,
-                            name: student.name || `${student.firstName || ''} ${student.lastName || ''}`.trim(),
-                            rollNo: student.rollNo,
-                            department: studentDepartmentCode,
-                            departmentName: getDepartmentFullName(studentDepartmentCode),
-                            year: studentYear,
-                            division: studentDivision,
-                            present: 0,
-                            absent: 0,
-                            total: 0,
-                            subjects: new Set(),
-                            dates: {},
-                            latestDate: null
-                        };
-                    }
-                    
-                    // Add subject to set
-                    if (record.subject) {
-                        studentConsolidated[studentId].subjects.add(record.subject);
-                    }
-                    
-                    // Count attendance
-                    studentConsolidated[studentId].total++;
-                    
-                    const isPresent = (
-                        status === true || 
-                        status === 'true' ||
-                        status === 'present' || 
-                        status === 'Present' || 
-                        status === 'PRESENT' ||
-                        status === 'P' ||
-                        status === 'p' ||
-                        status === 1 ||
-                        status === '1' ||
-                        (typeof status === 'string' && status.toLowerCase().trim() === 'present')
-                    );
-                    
-                    if (isPresent) {
-                        studentConsolidated[studentId].present++;
-                    } else {
-                        studentConsolidated[studentId].absent++;
-                    }
-                    
-                    // Track dates and latest date
-                    studentConsolidated[studentId].dates[record.date] = status;
-                    if (!studentConsolidated[studentId].latestDate || 
-                        new Date(record.date) > new Date(studentConsolidated[studentId].latestDate)) {
-                        studentConsolidated[studentId].latestDate = record.date;
-                    }
-                });
-            });
-            
-            // Convert to array and calculate percentages
-            let students = Object.values(studentConsolidated).map(student => {
-                const percentage = student.total > 0 ? ((student.present / student.total) * 100) : 0;
-                return {
-                    ...student,
-                    percentage,
-                    subjects: Array.from(student.subjects).join(', '), // Convert Set to string
-                    subjectCount: student.subjects.size
-                };
-            });
-            
-            console.log('Consolidated attendance summary:', {
-                totalStudents: students.length,
-                studentsWithAttendance: students.filter(s => s.total > 0).length,
-                totalPresentRecords: students.reduce((sum, s) => sum + s.present, 0),
-                totalAbsentRecords: students.reduce((sum, s) => sum + s.absent, 0),
-                totalRecords: students.reduce((sum, s) => sum + s.total, 0),
-                averagePercentage: students.length > 0 ? (students.reduce((sum, s) => sum + s.percentage, 0) / students.length).toFixed(2) : 0
-            });
-            
-            return students;
-        }
-
-        // Function to populate subject dropdown with available subjects
-        async function populateSubjectDropdown() {
-            try {
-                console.log('Populating subject dropdown...');
-                
-                if (!window.db) {
-                    console.log('Firebase not available, skipping subject population');
-                    return;
-                }
-                
-                // Get current teacher ID
-                const teacherId = sessionStorage.getItem('teacherId');
-                const isTeacher = sessionStorage.getItem('isTeacherLoggedIn') === 'true';
-                
-                // Query attendance data
-                let attendanceQuery = window.db.ref('attendance');
-                if (isTeacher && teacherId) {
-                    attendanceQuery = attendanceQuery.orderByChild('teacherId').equalTo(teacherId);
-                }
-                
-                const attendanceSnapshot = await attendanceQuery.once('value');
-                const attendanceData = attendanceSnapshot.val() || {};
-                
-                // Extract unique subjects
-                const subjects = new Set();
-                Object.values(attendanceData).forEach(record => {
-                    if (record.subject && record.subject.trim() !== '') {
-                        subjects.add(record.subject.trim());
-                    }
-                });
-                
-                // Sort subjects alphabetically
-                const sortedSubjects = Array.from(subjects).sort();
-                
-                console.log('Found subjects:', sortedSubjects);
-                
-                // Populate dropdown
-                const subjectSelect = document.getElementById('subject');
-                
-                // Clear existing options except "All Subjects"
-                subjectSelect.innerHTML = '<option value="">All Subjects</option>';
-                
-                // Add subject options
-                sortedSubjects.forEach(subject => {
-                    const option = document.createElement('option');
-                    option.value = subject;
-                    option.textContent = subject;
-                    subjectSelect.appendChild(option);
-                });
-                
-                console.log('Subject dropdown populated with', sortedSubjects.length, 'subjects');
-                
-            } catch (error) {
-                console.error('Error populating subject dropdown:', error);
-            }
-        }
 
         // Add debounce function to prevent too many API calls
         function debounce(func, wait) {
@@ -4315,37 +3807,9 @@
             }
         };
 
-        // Test function for date filtering
-        function testDateFiltering() {
-            const testDate = '2024-01-15';
-            const startDate = '2024-01-01';
-            const endDate = '2024-01-31';
-            
-            const recordDate = new Date(testDate);
-            const start = new Date(startDate + 'T00:00:00');
-            const end = new Date(endDate + 'T23:59:59');
-            
-            const inRange = recordDate >= start && recordDate <= end;
-            
-            console.log('Date filtering test:', {
-                testDate,
-                startDate,
-                endDate,
-                recordDate: recordDate.toISOString(),
-                start: start.toISOString(),
-                end: end.toISOString(),
-                inRange
-            });
-            
-            return inRange;
-        }
-        
         // Initialize teacher UID to code mapping
         (async function() {
             try {
-                // Test date filtering on load
-                testDateFiltering();
-                
                 // Wait for Firebase to be ready
                 if (typeof window.waitForFirebase === 'function') {
                     await window.waitForFirebase();
@@ -4508,6 +3972,247 @@
         }
 
         // Simple edit functionality complete - no complex functions needed
+        
+        } // Close updateStudentAttendance function
+        
+        // Function to edit individual student record in subject-wise view
+        async function editStudentRecord(recordKey, studentId) {
+            console.log('Edit record clicked:', { recordKey, studentId });
+            
+            try {
+                // Wait for Firebase to be ready
+                await waitForFirebase();
+                
+                // Get the attendance record
+                const recordRef = window.db.ref(`attendance/${recordKey}`);
+                const snapshot = await recordRef.once('value');
+                const record = snapshot.val();
+                
+                if (!record || !record.students || !record.students[studentId]) {
+                    alert('Record not found!');
+                    return;
+                }
+                
+                const currentStatus = record.students[studentId];
+                const isCurrentlyPresent = (
+                    currentStatus === true || 
+                    currentStatus === 'present' || 
+                    currentStatus === 'Present' || 
+                    currentStatus === 'P' || 
+                    currentStatus === 1 ||
+                    currentStatus === '1'
+                );
+                
+                const newStatus = confirm(
+                    `Current Status: ${isCurrentlyPresent ? 'Present' : 'Absent'}\n\n` +
+                    `Click OK to mark as ${isCurrentlyPresent ? 'Absent' : 'Present'}\n` +
+                    `Click Cancel to keep current status`
+                );
+                
+                if (newStatus) {
+                    // Update the status
+                    const updatedStatus = !isCurrentlyPresent;
+                    await recordRef.child(`students/${studentId}`).set(updatedStatus);
+                    
+                    // Update present/absent counts
+                    const students = record.students;
+                    let presentCount = 0, absentCount = 0;
+                    
+                    Object.values(students).forEach(status => {
+                        const isPresent = (
+                            status === true || 
+                            status === 'present' || 
+                            status === 'Present' || 
+                            status === 'P' || 
+                            status === 1 ||
+                            status === '1'
+                        );
+                        if (isPresent) presentCount++;
+                        else absentCount++;
+                    });
+                    
+                    // Update counts in record
+                    await recordRef.update({
+                        presentCount: presentCount,
+                        absentCount: absentCount,
+                        lastModified: new Date().toISOString()
+                    });
+                    
+                    alert(`Status updated successfully!\nNew Status: ${updatedStatus ? 'Present' : 'Absent'}`);
+                    
+                    // Reload the reports
+                    loadReports();
+                }
+                
+            } catch (error) {
+                console.error('Error editing record:', error);
+                alert('Error updating record: ' + error.message);
+            }
+        }
+        
+        } // Close another block
+        } // Close final block
+        
+        // Export to Excel functionality
+        function exportToExcel() {
+            console.log('🔄 Starting Excel export...');
+            
+            try {
+                // Get the current table data
+                const table = document.querySelector('.attendance-table');
+                if (!table) {
+                    alert('No data to export. Please load reports first.');
+                    return;
+                }
+                
+                // Get table headers with proper structure
+                const headers = [];
+                const headerRow = table.querySelector('thead tr');
+                if (headerRow) {
+                    const headerCells = headerRow.querySelectorAll('th');
+                    headerCells.forEach(cell => {
+                        // Skip checkbox column
+                        if (!cell.querySelector('input[type="checkbox"]')) {
+                            let headerText = cell.textContent.trim();
+                            // Clean up header text
+                            headerText = headerText.replace(/\s+/g, ' ');
+                            headers.push(headerText);
+                        }
+                    });
+                }
+                
+                // Get table data with proper formatting
+                const data = [];
+                const bodyRows = table.querySelectorAll('tbody tr');
+                bodyRows.forEach(row => {
+                    const rowData = [];
+                    const cells = row.querySelectorAll('td');
+                    cells.forEach((cell, index) => {
+                        // Skip checkbox column (first column)
+                        if (index > 0) {
+                            let cellText = cell.textContent.trim();
+                            
+                            // Handle percentage cells - keep % symbol for clarity
+                            if (cell.classList.contains('percentage-cell') || cellText.includes('%')) {
+                                // Keep percentage as is for better readability
+                                rowData.push(cellText);
+                            } else if (cellText === '-' || cellText === '') {
+                                // Handle empty or dash values
+                                rowData.push('');
+                            } else {
+                                // Regular cell data
+                                rowData.push(cellText);
+                            }
+                        }
+                    });
+                    if (rowData.length > 0) {
+                        data.push(rowData);
+                    }
+                });
+                
+                console.log('📊 Export data prepared:', { headers: headers.length, rows: data.length });
+                console.log('📋 Headers:', headers);
+                
+                if (data.length === 0) {
+                    alert('No attendance data to export. Please load reports first.');
+                    return;
+                }
+                
+                // Create workbook
+                const wb = XLSX.utils.book_new();
+                
+                // Create worksheet data with headers
+                const wsData = [headers, ...data];
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                
+                // Set column widths based on current view mode
+                let colWidths;
+                if (currentViewMode === 'combined') {
+                    // Combined view column widths
+                    colWidths = [
+                        { wch: 10 }, // Roll No
+                        { wch: 25 }, // Name
+                        { wch: 15 }, // Department
+                        { wch: 8 },  // Year
+                        { wch: 10 }, // Division
+                        { wch: 10 }, // Theory Present
+                        { wch: 10 }, // Theory Absent
+                        { wch: 10 }, // Theory Total
+                        { wch: 12 }, // Theory %
+                        { wch: 12 }, // Practical Present
+                        { wch: 12 }, // Practical Absent
+                        { wch: 12 }, // Practical Total
+                        { wch: 12 }, // Practical %
+                        { wch: 12 }, // Overall %
+                        { wch: 10 }  // Actions (if present)
+                    ];
+                } else {
+                    // Subject-wise view column widths
+                    colWidths = headers.map(header => {
+                        switch(header.toLowerCase()) {
+                            case 'roll no': return { wch: 10 };
+                            case 'name': return { wch: 25 };
+                            case 'department': return { wch: 15 };
+                            case 'subject': return { wch: 20 };
+                            case 'year': return { wch: 8 };
+                            case 'division': return { wch: 10 };
+                            case 'lecture type': return { wch: 12 };
+                            case 'date': return { wch: 12 };
+                            case 'status': return { wch: 10 };
+                            default: return { wch: 12 };
+                        }
+                    });
+                }
+                
+                // Ensure we don't exceed the actual number of columns
+                if (colWidths.length > headers.length) {
+                    colWidths = colWidths.slice(0, headers.length);
+                }
+                
+                ws['!cols'] = colWidths;
+                
+                // Add styling for header row
+                const headerRange = XLSX.utils.decode_range(ws['!ref']);
+                for (let col = headerRange.s.c; col <= headerRange.e.c; col++) {
+                    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+                    if (!ws[cellAddress]) continue;
+                    
+                    ws[cellAddress].s = {
+                        font: { bold: true, color: { rgb: "FFFFFF" } },
+                        fill: { fgColor: { rgb: "4F46E5" } },
+                        alignment: { horizontal: "center", vertical: "center" }
+                    };
+                }
+                
+                // Add worksheet to workbook
+                const viewType = currentViewMode === 'subject' ? 'Subject-wise' : 'Combined';
+                XLSX.utils.book_append_sheet(wb, ws, `${viewType} Report`);
+                
+                // Generate filename with current date and view type
+                const now = new Date();
+                const dateStr = now.toISOString().split('T')[0];
+                const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+                const filename = `Attendance_Report_${viewType}_${dateStr}_${timeStr}.xlsx`;
+                
+                // Save file
+                XLSX.writeFile(wb, filename);
+                
+                console.log('✅ Excel export completed:', filename);
+                
+                // Show success notification
+                showNotification(
+                    'Export Successful', 
+                    `Attendance report exported as ${filename}`, 
+                    'success'
+                );
+                
+            } catch (error) {
+                console.error('❌ Export error:', error);
+                alert('Error exporting data: ' + error.message);
+            }
+        }
+
+        
     </script>
 
     <!-- Add required libraries for export -->
