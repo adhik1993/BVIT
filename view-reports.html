@@ -34,6 +34,8 @@
     <title>Attendance Reports - BVIT</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- XLSX Library for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <!-- Firebase SDKs: Add these at the top -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -541,6 +543,121 @@
             color: white;
         }
 
+        /* Pagination Styles */
+        .pagination-container {
+            background: var(--white);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .pagination-info {
+            color: var(--text-dark);
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pagination-btn {
+            background: var(--white);
+            border: 2px solid var(--border);
+            color: var(--text-dark);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-numbers {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .page-number {
+            background: var(--white);
+            border: 2px solid var(--border);
+            color: var(--text-dark);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .page-number:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .page-number.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .records-per-page {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .records-per-page label {
+            color: var(--text-dark);
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .records-per-page select {
+            padding: 8px 12px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            background: var(--white);
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .pagination-container {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .pagination-controls {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+
         .filter-btn.active {
             background: var(--primary);
             color: white;
@@ -1012,6 +1129,37 @@
                     </tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div class="pagination-container" id="paginationContainer" style="display: none;">
+        <div class="pagination-info">
+            <span id="paginationInfo">Showing 1-100 of 0 records</span>
+        </div>
+        <div class="pagination-controls">
+            <button id="firstPageBtn" class="pagination-btn" onclick="goToPage(1)" disabled>
+                <i class="fas fa-angle-double-left"></i> First
+            </button>
+            <button id="prevPageBtn" class="pagination-btn" onclick="goToPage(currentPage - 1)" disabled>
+                <i class="fas fa-angle-left"></i> Previous
+            </button>
+            <span class="page-numbers" id="pageNumbers"></span>
+            <button id="nextPageBtn" class="pagination-btn" onclick="goToPage(currentPage + 1)" disabled>
+                Next <i class="fas fa-angle-right"></i>
+            </button>
+            <button id="lastPageBtn" class="pagination-btn" onclick="goToPage(totalPages)" disabled>
+                Last <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
+        <div class="records-per-page">
+            <label for="recordsPerPage">Records per page:</label>
+            <select id="recordsPerPage" onchange="changeRecordsPerPage()">
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="200">200</option>
+                <option value="500">500</option>
+            </select>
         </div>
     </div>
 
@@ -1996,9 +2144,15 @@
                     
                     // Query attendance based on user type
                     let attendanceQuery = window.db.ref('attendance');
-                    if (isTeacher && teacherId) {
-                        console.log('Querying attendance for teacher:', teacherId);
+                    // 🔧 CRITICAL FIX: Only filter by teacher if not admin/clerk
+                    const isAdmin = sessionStorage.getItem('isAdminLoggedIn') === 'true';
+                    const isClerk = sessionStorage.getItem('isClerkLoggedIn') === 'true';
+                    
+                    if (isTeacher && teacherId && !isAdmin && !isClerk) {
+                        console.log('🔒 Teacher access: Querying attendance for teacher:', teacherId);
                         attendanceQuery = attendanceQuery.orderByChild('teacherId').equalTo(teacherId);
+                    } else if (isAdmin || isClerk) {
+                        console.log('🔓 Admin/Clerk access: Loading ALL attendance records');
                     }
 
                     let attendanceSnapshot, studentsSnapshot;
@@ -2055,8 +2209,13 @@
             }
         }
 
-        // Global variable to track current view mode
+        // Global variables to track current view mode and pagination
         let currentViewMode = 'subject'; // 'combined' or 'subject'
+        let currentPage = 1;
+        let recordsPerPage = 100;
+        let totalRecords = 0;
+        let totalPages = 0;
+        let allStudentsData = []; // Store all data for pagination
         
         // Function to switch between views
         function switchView(viewMode) {
@@ -2117,7 +2276,7 @@ function showError(message) {
     }
 }
 
-// Update table with processed data
+// Update table with processed data (with pagination)
 function updateTable(students) {
     const tableBody = document.getElementById('attendanceTableBody');
     if (!tableBody) {
@@ -2135,15 +2294,33 @@ function updateTable(students) {
                 </td>
             </tr>
         `;
+        hidePagination();
         return;
     }
     
-    console.log('Updating table with', students.length, 'students');
+    // Store all data for pagination
+    allStudentsData = students;
+    totalRecords = students.length;
+    totalPages = Math.ceil(totalRecords / recordsPerPage);
     
-    // Generate table rows based on current view mode
+    console.log('📊 Pagination Info:', {
+        totalRecords,
+        recordsPerPage,
+        totalPages,
+        currentPage
+    });
+    
+    // Get current page data
+    const startIndex = (currentPage - 1) * recordsPerPage;
+    const endIndex = startIndex + recordsPerPage;
+    const currentPageData = students.slice(startIndex, endIndex);
+    
+    console.log('Updating table with', currentPageData.length, 'students (page', currentPage, 'of', totalPages, ')');
+    
+    // Generate table rows based on current view mode (using paginated data)
     if (currentViewMode === 'subject') {
         // Subject-wise detailed view: show individual student records
-        tableBody.innerHTML = students.map(record => `
+        tableBody.innerHTML = currentPageData.map(record => `
             <tr>
                 <td>${record.rollNo || '-'}</td>
                 <td>${record.name || '-'}</td>
@@ -2167,7 +2344,7 @@ function updateTable(students) {
         // Combined view: show student details with theory/practical columns
         const selectedStudents = new Set(); // For checkbox functionality
         
-        tableBody.innerHTML = students.map(student => {
+        tableBody.innerHTML = currentPageData.map(student => {
             // Calculate theory totals
             const theoryTotal = (student.theoryPresent || 0) + (student.theoryAbsent || 0);
             const theoryPercentage = theoryTotal > 0 ? Math.round((student.theoryPresent / theoryTotal) * 100) : 0;
@@ -2221,7 +2398,367 @@ function updateTable(students) {
         }).join('');
     }
     
-    console.log('Table updated successfully');
+    // Update pagination controls
+    updatePaginationControls();
+    
+    console.log('Table updated successfully with pagination');
+}
+
+// Pagination Functions
+function updatePaginationControls() {
+    const paginationContainer = document.getElementById('paginationContainer');
+    const paginationInfo = document.getElementById('paginationInfo');
+    const pageNumbers = document.getElementById('pageNumbers');
+    const firstPageBtn = document.getElementById('firstPageBtn');
+    const prevPageBtn = document.getElementById('prevPageBtn');
+    const nextPageBtn = document.getElementById('nextPageBtn');
+    const lastPageBtn = document.getElementById('lastPageBtn');
+    
+    if (!paginationContainer || totalRecords === 0) {
+        hidePagination();
+        return;
+    }
+    
+    // Show pagination if more than recordsPerPage records
+    if (totalRecords > recordsPerPage) {
+        paginationContainer.style.display = 'flex';
+        
+        // Update pagination info
+        const startRecord = (currentPage - 1) * recordsPerPage + 1;
+        const endRecord = Math.min(currentPage * recordsPerPage, totalRecords);
+        paginationInfo.textContent = `Showing ${startRecord}-${endRecord} of ${totalRecords} records`;
+        
+        // Update button states
+        firstPageBtn.disabled = currentPage === 1;
+        prevPageBtn.disabled = currentPage === 1;
+        nextPageBtn.disabled = currentPage === totalPages;
+        lastPageBtn.disabled = currentPage === totalPages;
+        
+        // Generate page numbers
+        generatePageNumbers();
+    } else {
+        hidePagination();
+    }
+}
+
+function generatePageNumbers() {
+    const pageNumbers = document.getElementById('pageNumbers');
+    if (!pageNumbers) return;
+    
+    let pagesHtml = '';
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    // Adjust start page if we're near the end
+    if (endPage - startPage < maxVisiblePages - 1) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    // Add ellipsis at the beginning if needed
+    if (startPage > 1) {
+        pagesHtml += `<span class="page-number" onclick="goToPage(1)">1</span>`;
+        if (startPage > 2) {
+            pagesHtml += `<span class="page-ellipsis">...</span>`;
+        }
+    }
+    
+    // Add page numbers
+    for (let i = startPage; i <= endPage; i++) {
+        const activeClass = i === currentPage ? 'active' : '';
+        pagesHtml += `<span class="page-number ${activeClass}" onclick="goToPage(${i})">${i}</span>`;
+    }
+    
+    // Add ellipsis at the end if needed
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            pagesHtml += `<span class="page-ellipsis">...</span>`;
+        }
+        pagesHtml += `<span class="page-number" onclick="goToPage(${totalPages})">${totalPages}</span>`;
+    }
+    
+    pageNumbers.innerHTML = pagesHtml;
+}
+
+function goToPage(page) {
+    if (page < 1 || page > totalPages || page === currentPage) return;
+    
+    currentPage = page;
+    updateTable(allStudentsData);
+    
+    // Scroll to top of table
+    document.querySelector('.table-container').scrollIntoView({ behavior: 'smooth' });
+}
+
+function changeRecordsPerPage() {
+    const select = document.getElementById('recordsPerPage');
+    recordsPerPage = parseInt(select.value);
+    currentPage = 1; // Reset to first page
+    
+    if (allStudentsData.length > 0) {
+        updateTable(allStudentsData);
+    }
+}
+
+function hidePagination() {
+    const paginationContainer = document.getElementById('paginationContainer');
+    if (paginationContainer) {
+        paginationContainer.style.display = 'none';
+    }
+}
+
+// Excel Export Function - ALWAYS exports COMPLETE database (bypasses pagination completely)
+async function exportToExcel() {
+    try {
+        console.log('🚀 FORCE EXPORTING COMPLETE DATABASE - IGNORING PAGINATION!');
+        
+        // Show loading indicator
+        const loadingMsg = document.createElement('div');
+        loadingMsg.innerHTML = `
+            <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                        background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
+                        z-index: 10000; text-align: center;">
+                <i class="fas fa-spinner fa-spin fa-2x" style="color: #4F46E5; margin-bottom: 10px;"></i>
+                <p style="margin: 0; font-weight: bold;">📊 Exporting COMPLETE database...</p>
+                <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #666;">Please wait, fetching all records...</p>
+            </div>
+        `;
+        document.body.appendChild(loadingMsg);
+        
+        // Wait for Firebase to be ready
+        if (typeof window.waitForFirebase === 'function') {
+            await window.waitForFirebase();
+        }
+        
+        console.log('🔥 Firebase ready, fetching COMPLETE database...');
+        
+        // FORCE fetch ALL data from database - completely bypass pagination
+        let attendanceQuery = window.db.ref('attendance');
+        
+        // Apply teacher filter ONLY if teacher (not admin)
+        const isTeacher = sessionStorage.getItem('isTeacherLoggedIn') === 'true';
+        const teacherId = sessionStorage.getItem('teacherId');
+        const isAdmin = sessionStorage.getItem('isAdminLoggedIn') === 'true';
+        const isClerk = sessionStorage.getItem('isClerkLoggedIn') === 'true';
+        
+        if (isTeacher && teacherId && !isAdmin && !isClerk) {
+            console.log('👨‍🏫 Teacher export: ALL records for teacher:', teacherId);
+            attendanceQuery = attendanceQuery.orderByChild('teacherId').equalTo(teacherId);
+        } else {
+            console.log('👑 Admin/Clerk export: ALL ATTENDANCE RECORDS FROM DATABASE');
+        }
+        
+        // Fetch EVERYTHING from database
+        console.log('📡 Fetching complete database...');
+        const [attendanceSnapshot, studentsSnapshot] = await Promise.all([
+            attendanceQuery.once('value'),
+            window.db.ref('students').once('value')
+        ]);
+        
+        const rawAttendanceData = attendanceSnapshot.val() || {};
+        const rawStudentsData = studentsSnapshot.val() || {};
+        
+        console.log('💾 RAW DATABASE FETCHED:', {
+            totalAttendanceRecords: Object.keys(rawAttendanceData).length,
+            totalStudents: Object.keys(rawStudentsData).length
+        });
+        
+        // Get current filters (but apply to COMPLETE dataset)
+        const exportFilters = {
+            department: document.getElementById('department').value,
+            year: document.getElementById('year').value,
+            division: document.getElementById('division').value,
+            lectureType: document.getElementById('lectureType').value,
+            batch: document.getElementById('batch').value,
+            subject: document.getElementById('subject').value,
+            startDate: document.getElementById('startDate').value,
+            endDate: document.getElementById('endDate').value,
+            teacherId: teacherId,
+            teacherNames: window.teacherNames || {},
+            teachersData: window.teachersData || {}
+        };
+        
+        console.log('🎯 Applying filters to COMPLETE database:', exportFilters);
+        
+        // Process COMPLETE database with filters
+        const completeExportData = await processAttendanceData(rawAttendanceData, rawStudentsData, exportFilters);
+        
+        console.log('✅ COMPLETE DATABASE PROCESSED FOR EXPORT:', completeExportData.length, 'records');
+        
+        // Remove loading indicator
+        document.body.removeChild(loadingMsg);
+        
+        if (!completeExportData || completeExportData.length === 0) {
+            alert('❌ कोणताही डेटा उपलब्ध नाही / No data found in complete database for export');
+            return;
+        }
+        
+        // Prepare data for export - use COMPLETE processed data
+        const exportData = [];
+        
+        if (currentViewMode === 'subject') {
+            // Subject-wise view export
+            console.log('📋 Preparing subject-wise export data...');
+            
+            // Headers for subject-wise view
+            const headers = ['Roll No', 'Student Name', 'Department', 'Year', 'Division', 'Subject', 'Lecture Type', 'Batch', 'Date Taken', 'Status', 'Attendance %'];
+            exportData.push(headers);
+            
+            // Add ALL records from COMPLETE DATABASE (zero pagination)
+            completeExportData.forEach(record => {
+                const row = [
+                    record.rollNo || '-',
+                    record.name || '-',
+                    getDepartmentFullName(record.department) || record.department || '-',
+                    record.year || '-',
+                    record.division || '-',
+                    record.subject || '-',
+                    record.lectureType || 'theory',
+                    record.lectureType === 'practical' ? (record.batch || 'A') : '-',
+                    record.date || '-',
+                    record.status || '-',
+                    record.attendancePercentage + '%' || '-'
+                ];
+                exportData.push(row);
+            });
+            
+        } else {
+            // Combined view export
+            console.log('📋 Preparing combined view export data...');
+            
+            // Headers for combined view
+            const headers = [
+                'Roll No', 'Student Name', 'Department', 'Year', 'Division',
+                'Theory Present', 'Theory Absent', 'Theory Total', 'Theory %',
+                'Practical Present', 'Practical Absent', 'Practical Total', 'Practical %',
+                'Overall %'
+            ];
+            exportData.push(headers);
+            
+            // Add ALL records from COMPLETE DATABASE (zero pagination)
+            completeExportData.forEach(student => {
+                // Calculate theory totals
+                const theoryTotal = (student.theoryPresent || 0) + (student.theoryAbsent || 0);
+                const theoryPercentage = theoryTotal > 0 ? Math.round((student.theoryPresent / theoryTotal) * 100) : 0;
+                
+                // Calculate practical totals
+                const practicalTotal = (student.practicalPresent || 0) + (student.practicalAbsent || 0);
+                const practicalPercentage = practicalTotal > 0 ? Math.round((student.practicalPresent / practicalTotal) * 100) : 0;
+                
+                // Calculate overall percentage
+                const totalPresent = (student.theoryPresent || 0) + (student.practicalPresent || 0);
+                const totalClasses = theoryTotal + practicalTotal;
+                const percentage = totalClasses > 0 ? Math.round((totalPresent / totalClasses) * 100) : 0;
+                
+                const row = [
+                    student.rollNo || '-',
+                    student.name || '-',
+                    student.departmentName || getDepartmentFullName(student.department) || '-',
+                    student.year || '-',
+                    student.division || '-',
+                    student.theoryPresent || 0,
+                    student.theoryAbsent || 0,
+                    theoryTotal,
+                    theoryPercentage + '%',
+                    student.practicalPresent || 0,
+                    student.practicalAbsent || 0,
+                    practicalTotal,
+                    practicalPercentage + '%',
+                    percentage + '%'
+                ];
+                exportData.push(row);
+            });
+        }
+        
+        console.log('📊 Export data prepared:', exportData.length, 'rows (including header)');
+        
+        // Create workbook and worksheet
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(exportData);
+        
+        // Set column widths based on view mode
+        let colWidths;
+        if (currentViewMode === 'subject') {
+            // Subject-wise view column widths
+            colWidths = [
+                { wch: 10 }, // Roll No
+                { wch: 25 }, // Name
+                { wch: 15 }, // Department
+                { wch: 8 },  // Year
+                { wch: 10 }, // Division
+                { wch: 20 }, // Subject
+                { wch: 12 }, // Lecture Type
+                { wch: 8 },  // Batch
+                { wch: 12 }, // Date
+                { wch: 10 }, // Status
+                { wch: 12 }  // Attendance %
+            ];
+        } else {
+            // Combined view column widths
+            colWidths = [
+                { wch: 10 }, // Roll No
+                { wch: 25 }, // Name
+                { wch: 15 }, // Department
+                { wch: 8 },  // Year
+                { wch: 10 }, // Division
+                { wch: 10 }, // Theory Present
+                { wch: 10 }, // Theory Absent
+                { wch: 10 }, // Theory Total
+                { wch: 12 }, // Theory %
+                { wch: 12 }, // Practical Present
+                { wch: 12 }, // Practical Absent
+                { wch: 12 }, // Practical Total
+                { wch: 12 }, // Practical %
+                { wch: 12 }  // Overall %
+            ];
+        }
+        
+        ws['!cols'] = colWidths;
+        
+        // Add styling for header row
+        const headerRange = XLSX.utils.decode_range(ws['!ref']);
+        for (let col = headerRange.s.c; col <= headerRange.e.c; col++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+            if (!ws[cellAddress]) continue;
+            
+            ws[cellAddress].s = {
+                font: { bold: true, color: { rgb: "FFFFFF" } },
+                fill: { fgColor: { rgb: "4F46E5" } },
+                alignment: { horizontal: "center", vertical: "center" }
+            };
+        }
+        
+        // Add worksheet to workbook
+        const viewType = currentViewMode === 'subject' ? 'Subject-wise' : 'Combined';
+        XLSX.utils.book_append_sheet(wb, ws, `${viewType} Report`);
+        
+        // Generate filename with current date and view type
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+        const filename = `Attendance_Report_${viewType}_${dateStr}_${timeStr}.xlsx`;
+        
+        // Save file
+        XLSX.writeFile(wb, filename);
+        
+        console.log('✅ Excel export completed:', filename);
+        console.log('🎉 COMPLETE DATABASE EXPORTED:', completeExportData.length, 'total records');
+        
+        // Show detailed success notification
+        const filterCount = Object.values(exportFilters).filter(f => f && f.trim() && f !== 'undefined').length;
+        alert(`🎉 Excel export संपूर्ण यशस्वी! / COMPLETE Excel export successful!\n\n📁 File: ${filename}\n📊 Records exported: ${completeExportData.length}\n💾 Source: COMPLETE DATABASE (not paginated)\n🎯 Filters applied: ${filterCount > 0 ? 'Yes (' + filterCount + ')' : 'No'}\n👀 View: ${viewType}\n\n✅ सर्व डेटा एक्सपोर्ट झाला! / All data exported successfully!`);
+        
+    } catch (error) {
+        console.error('💥 EXPORT ERROR:', error);
+        
+        // Remove loading indicator if it exists
+        const loadingMsg = document.querySelector('div[style*="position: fixed"]');
+        if (loadingMsg) {
+            document.body.removeChild(loadingMsg);
+        }
+        
+        alert('💥 Export मध्ये त्रुटी! / Export Error!\n\n' + error.message + '\n\nPlease try again or contact support.');
+    }
 }
 
 // Helper function to get percentage class for styling
@@ -2246,7 +2783,10 @@ async function processAttendanceData(attendanceData, studentsData, filters) {
                 subject: record.subject,
                 date: record.date,
                 lectureType: record.lectureType,
-                hasStudents: !!record.students
+                hasStudents: !!record.students,
+                class: record.class,
+                teacherId: record.teacherId,
+                fullRecord: record
             });
             
             // Skip if not the teacher's record
