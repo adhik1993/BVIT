@@ -2436,13 +2436,30 @@
                     if (teachersSnapshot.exists()) {
                         teachersSnapshot.forEach(snap => {
                             const teacher = snap.val();
-                            const teacherId = teacher.teacherId || snap.key;
-                            const teacherName = teacher.firstName && teacher.lastName 
-                                ? `${teacher.firstName} ${teacher.lastName}`.trim()
-                                : teacher.name || teacherId;
-                            teacherDetails[teacherId] = teacherName;
+                            if (teacher && typeof teacher === 'object') {
+                                const teacherId = teacher.teacherId || teacher.code || snap.key;
+                                const firstName = teacher.firstName || '';
+                                const lastName = teacher.lastName || '';
+                                const fullName = `${firstName} ${lastName}`.trim() || teacher.name || teacherId;
+                                
+                                // Store teacher name with multiple possible keys
+                                teacherDetails[teacherId] = fullName;
+                                teacherDetails[snap.key] = fullName;
+                                if (teacher.code && teacher.code !== teacherId) {
+                                    teacherDetails[teacher.code] = fullName;
+                                }
+                                
+                                console.log('📝 Teacher mapped:', {
+                                    teacherId: teacherId,
+                                    firebaseKey: snap.key,
+                                    name: fullName,
+                                    originalData: teacher
+                                });
+                            }
                         });
                     }
+                    
+                    console.log('👥 Teacher details cache:', teacherDetails);
                     
                     attendanceSnapshot.forEach(snap => {
                         const record = snap.val();
@@ -2470,10 +2487,25 @@
                                         const totalCount = Object.keys(students).length;
                                         const percentage = totalCount > 0 ? ((presentCount / totalCount) * 100).toFixed(1) : '0';
                                         
+                                        // Enhanced teacher name resolution
+                                        let teacherName = 'N/A';
+                                        if (record.teacherId) {
+                                            teacherName = teacherDetails[record.teacherId] || 
+                                                         teacherDetails[record.teacherId.toUpperCase()] ||
+                                                         teacherDetails[record.teacherId.toLowerCase()] ||
+                                                         record.teacherId;
+                                        }
+                                        
+                                        console.log('🔍 Teacher resolution for record:', {
+                                            recordTeacherId: record.teacherId,
+                                            resolvedName: teacherName,
+                                            availableTeachers: Object.keys(teacherDetails)
+                                        });
+
                                         subjectsData.push({
                                             subject: record.subject || 'N/A',
                                             lectureType: record.lectureType || 'N/A',
-                                            teacher: teacherDetails[record.teacherId] || record.teacherId || 'N/A',
+                                            teacher: teacherName,
                                             time: record.time || 'N/A',
                                             present: presentCount,
                                             absent: absentCount,
@@ -2503,10 +2535,24 @@
                                     const totalCount = Object.keys(students).length;
                                     const percentage = totalCount > 0 ? ((presentCount / totalCount) * 100).toFixed(1) : '0';
                                     
+                                    // Enhanced teacher name resolution for old structure
+                                    let teacherName = 'N/A';
+                                    if (record.teacherId) {
+                                        teacherName = teacherDetails[record.teacherId] || 
+                                                     teacherDetails[record.teacherId.toUpperCase()] ||
+                                                     teacherDetails[record.teacherId.toLowerCase()] ||
+                                                     record.teacherId;
+                                    }
+                                    
+                                    console.log('🔍 Teacher resolution (old structure):', {
+                                        recordTeacherId: record.teacherId,
+                                        resolvedName: teacherName
+                                    });
+
                                     subjectsData.push({
                                         subject: record.subject || 'N/A',
                                         lectureType: record.lectureType || 'N/A',
-                                        teacher: teacherDetails[record.teacherId] || record.teacherId || 'N/A',
+                                        teacher: teacherName,
                                         time: record.time || 'N/A',
                                         present: presentCount,
                                         absent: absentCount,
