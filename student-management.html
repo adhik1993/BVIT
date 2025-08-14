@@ -117,16 +117,7 @@
         
         // Initialize Firebase if not already initialized
         if (!firebase.apps.length) {
-            firebase.initializeApp({
-                apiKey: "AIzaSyDClVT8h1T6mBcfD4USQU3a6iINmyWTNmk",
-                authDomain: "attendance-66f11.firebaseapp.com",
-                databaseURL: "https://attendance-66f11-default-rtdb.firebaseio.com",
-                projectId: "attendance-66f11",
-                storageBucket: "attendance-66f11.appspot.com",
-                messagingSenderId: "1041295884103",
-                appId: "1:1041295884103:web:e7748b4c5a881e315b5662",
-                measurementId: "G-7VNETMRH26"
-            });
+            firebase.initializeApp(window.firebaseConfig);
         }
 
         // Get references to Firebase services
@@ -675,8 +666,16 @@
                     studentsByDept[dept].push(student);
                 });
 
-                // Clear table
+                // Clear table and reset checkboxes
                 if (tableBody) tableBody.innerHTML = '';
+                
+                // Reset select all checkbox and bulk delete button
+                const selectAllCheckbox = document.getElementById('selectAllStudents');
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = false;
+                    selectAllCheckbox.indeterminate = false;
+                }
+                updateBulkDeleteButton();
 
                 // Sort departments
                 const sortedDepts = Object.keys(studentsByDept).sort((a, b) => {
@@ -729,6 +728,9 @@
                     studentsByDept[dept].forEach(student => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
+                            <td>
+                                <input type="checkbox" class="student-checkbox" value="${student.id}" onchange="updateBulkDeleteButton()">
+                            </td>
                             <td>${student.rollNo || 'N/A'}</td>
                             <td>${student.firstName} ${student.lastName}</td>
                             <td>${student.email}</td>
@@ -751,27 +753,40 @@
                     });
                 });
 
-            } catch (error) {
-                console.error('Error loading students:', error);
-                if (tableBody) {
-                    tableBody.innerHTML = `
-                        <tr>
-                            <td colspan="8" class="text-center text-danger">
-                                <i class="fas fa-exclamation-circle"></i>
-                                Error loading students: ${error.message}
-                            </td>
-                        </tr>
-                    `;
-                }
-            }
-        }
+} catch (error) {
+    console.error('Error loading students:', error);
+    if (tableBody) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center text-danger">
+                    <i class="fas fa-exclamation-circle"></i>
+                    Error loading students: ${error.message}
+                </td>
+            </tr>
+         `;
+    }
+}
+}
 
         // Edit student
         function editStudent(studentId) {
+            console.log('Edit button clicked for student ID:', studentId);
             // Get student data
-            db.ref('students/' + studentId).once('value')
+            firebase.database().ref('students/' + studentId).once('value')
                 .then((snapshot) => {
                     const student = snapshot.val();
+                    console.log('Student data fetched:', student);
+                    console.log('Student object keys:', Object.keys(student));
+                    console.log('Detailed student data:', JSON.stringify(student, null, 2));
+                    
+                    // Check for different possible field names
+                    console.log('Checking field variations:');
+                    console.log('firstName:', student.firstName);
+                    console.log('first_name:', student.first_name);
+                    console.log('name:', student.name);
+                    console.log('lastName:', student.lastName);
+                    console.log('last_name:', student.last_name);
+                    console.log('surname:', student.surname);
                     if (!student) {
                         alert('विद्यार्थी सापडला नाही!');
                         return;
@@ -782,14 +797,48 @@
                     const closeBtn = modal.querySelector('.close');
 
                     // Fill form with current data
-                    document.getElementById('editStudentId').value = studentId;
-                    document.getElementById('editRollNo').value = student.rollNo || '';
-                    document.getElementById('editFirstName').value = student.firstName || '';
-                    document.getElementById('editLastName').value = student.lastName || '';
-                    document.getElementById('editEmail').value = student.email || '';
-                    document.getElementById('editPhone').value = student.phone || '';
-                    document.getElementById('editDepartment').value = student.department || '';
-                    document.getElementById('editYear').value = student.year || '';
+                    console.log('Populating form fields with data:', {
+                        rollNo: student.rollNo,
+                        firstName: student.firstName,
+                        lastName: student.lastName,
+                        email: student.email,
+                        phone: student.phone,
+                        department: student.department,
+                        year: student.year
+                    });
+                    
+                    // Check if form elements exist before setting values
+                    const editStudentId = document.getElementById('editStudentId');
+                    const editRollNo = document.getElementById('editRollNo');
+                    const editFirstName = document.getElementById('editFirstName');
+                    const editLastName = document.getElementById('editLastName');
+                    const editEmail = document.getElementById('editEmail');
+                    const editPhone = document.getElementById('editPhone');
+                    const editDepartment = document.getElementById('editDepartment');
+                    const editYear = document.getElementById('editYear');
+                    
+                    // Handle name field - split full name into first and last name
+                    let firstName = '';
+                    let lastName = '';
+                    if (student.name) {
+                        const nameParts = student.name.trim().split(' ');
+                        firstName = nameParts[0] || '';
+                        lastName = nameParts.slice(1).join(' ') || '';
+                    }
+                    
+                    if (editStudentId) editStudentId.value = studentId;
+                    if (editRollNo) editRollNo.value = student.rollNo || '';
+                    if (editFirstName) editFirstName.value = firstName;
+                    if (editLastName) editLastName.value = lastName;
+                    if (editEmail) editEmail.value = student.email || '';
+                    if (editPhone) editPhone.value = student.phone || '';
+                    if (editDepartment) editDepartment.value = student.department || '';
+                    if (editYear) editYear.value = student.year || '';
+                    
+                    console.log('Form fields populated. Checking values:');
+                    console.log('Roll No field value:', editRollNo ? editRollNo.value : 'Element not found');
+                    console.log('First Name field value:', editFirstName ? editFirstName.value : 'Element not found');
+                    console.log('Last Name field value:', editLastName ? editLastName.value : 'Element not found');
                     
 
                     // Handle division checkboxes
@@ -868,23 +917,26 @@
                     // Generate class code
                     const classCode = generateClassCode(year, department, division);
 
+                    // Get form data and combine first/last name into single name field
+                    const firstName = document.getElementById('editFirstName').value.trim();
+                    const lastName = document.getElementById('editLastName').value.trim();
+                    const fullName = (firstName + ' ' + lastName).trim();
+                    
                     // Create student data object
                     const studentData = {
                         rollNo: newRollNo,
-                        firstName: document.getElementById('editFirstName').value,
-                        lastName: document.getElementById('editLastName').value,
+                        name: fullName,
                         email: document.getElementById('editEmail').value,
                         phone: document.getElementById('editPhone').value,
                         department: department,
                         year: year,
-                         // Add semester to data
                         division: division,
                         class: classCode,
                         lastUpdated: new Date().toISOString()
                     };
 
                     // Validate data
-                    if (!studentData.firstName || !studentData.lastName) {
+                    if (!firstName || !lastName) {
                         alert('कृपया नाव भरा');
                         return;
                     }
@@ -909,10 +961,7 @@
                         return;
                     }
 
-                    if (!studentData.semester) { 
-                        alert('कृपया सेमेस्टर निवडा');
-                        return;
-                    }
+
 
                     if (department === 'Computer Technology' && !division) {
                         alert('कृपया विभाग निवडा');
@@ -1338,6 +1387,127 @@
                 console.log('Generate Passwords button hidden - User is not admin');
             }
         }
+        
+        // Function to toggle select all checkboxes
+        function toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('selectAllStudents');
+            const studentCheckboxes = document.querySelectorAll('.student-checkbox');
+            
+            studentCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+            
+            updateBulkDeleteButton();
+        }
+        
+        // Function to update bulk delete button visibility
+        function updateBulkDeleteButton() {
+            const selectedCheckboxes = document.querySelectorAll('.student-checkbox:checked');
+            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+            const selectAllCheckbox = document.getElementById('selectAllStudents');
+            
+            if (selectedCheckboxes.length > 0) {
+                bulkDeleteBtn.style.display = 'inline-flex';
+                bulkDeleteBtn.innerHTML = `<i class="fas fa-trash-alt"></i> Delete Selected (${selectedCheckboxes.length})`;
+            } else {
+                bulkDeleteBtn.style.display = 'none';
+            }
+            
+            // Update select all checkbox state
+            const allCheckboxes = document.querySelectorAll('.student-checkbox');
+            const checkedCheckboxes = document.querySelectorAll('.student-checkbox:checked');
+            
+            if (checkedCheckboxes.length === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (checkedCheckboxes.length === allCheckboxes.length) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+                selectAllCheckbox.checked = false;
+            }
+        }
+        
+        // Function to bulk delete selected students
+        async function bulkDeleteStudents() {
+            console.log('Bulk delete function called');
+            const selectedCheckboxes = document.querySelectorAll('.student-checkbox:checked');
+            console.log('Selected checkboxes:', selectedCheckboxes.length);
+            
+            if (selectedCheckboxes.length === 0) {
+                alert('Please select students to delete');
+                return;
+            }
+            
+            const studentIds = Array.from(selectedCheckboxes).map(checkbox => checkbox.value);
+            console.log('Student IDs to delete:', studentIds);
+            const confirmMessage = `Are you sure you want to delete ${studentIds.length} selected student(s)? This action cannot be undone.`;
+            
+            if (!confirm(confirmMessage)) {
+                console.log('User cancelled deletion');
+                return;
+            }
+            
+            console.log('Starting bulk delete process...');
+            
+            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+            const originalText = bulkDeleteBtn.innerHTML;
+            
+            try {
+                // Disable button and show loading
+                bulkDeleteBtn.disabled = true;
+                bulkDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+                
+                // Delete students one by one
+                let successCount = 0;
+                let errorCount = 0;
+                
+                console.log('Firebase database reference:', db);
+                
+                // Use Promise.all to delete all students
+                const deletePromises = studentIds.map(studentId => {
+                    return new Promise((resolve) => {
+                        console.log('Attempting to delete student:', studentId);
+                        db.ref('students/' + studentId).remove((error) => {
+                            if (error) {
+                                console.error('Error deleting student:', studentId, error);
+                                errorCount++;
+                            } else {
+                                console.log('Successfully deleted student:', studentId);
+                                successCount++;
+                            }
+                            resolve();
+                        });
+                    });
+                });
+                
+                // Wait for all deletions to complete
+                await Promise.all(deletePromises);
+                
+                // Show result message
+                if (errorCount === 0) {
+                    alert(`Successfully deleted ${successCount} student(s)`);
+                } else {
+                    alert(`Deleted ${successCount} student(s). Failed to delete ${errorCount} student(s).`);
+                }
+                
+                // Reload students list
+                await loadStudents();
+                
+                // Reset checkboxes
+                document.getElementById('selectAllStudents').checked = false;
+                updateBulkDeleteButton();
+                
+            } catch (error) {
+                console.error('Error in bulk delete:', error);
+                alert('Error deleting students. Please try again.');
+            } finally {
+                // Reset button state
+                bulkDeleteBtn.disabled = false;
+                bulkDeleteBtn.innerHTML = originalText;
+            }
+        }
     </script>
     
     <style>
@@ -1600,6 +1770,52 @@
             box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
             position: relative;
             overflow: hidden;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .bulk-delete-btn {
+            background: #dc2626;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .bulk-delete-btn:hover {
+            background: #b91c1c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+        }
+        
+        .bulk-delete-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
 
         .student-list-header::before {
@@ -2100,7 +2316,7 @@
                     </div>
                     <div class="form-group">
                         <label for="year">Year</label>
-                        <select id="year" name="year" required onchange="updateClassOptions(); updateSemesterOptions()">
+                        <select id="year" name="year" required onchange="updateClassOptions()">
                             <option value="">Select Year</option>
                             <option value="FY">First Year (FY)</option>
                             <option value="SY">Second Year (SY)</option>
@@ -2146,10 +2362,16 @@
                     <i class="fas fa-users"></i>
                     <span>Student List</span>
                 </div>
-                <a href="import-students.html" class="import-btn">
-                    <i class="fas fa-file-import"></i>
-                    Import Students
-                </a>
+                <div class="header-actions">
+                    <button id="bulkDeleteBtn" class="bulk-delete-btn" onclick="bulkDeleteStudents()" style="display: none;">
+                        <i class="fas fa-trash-alt"></i>
+                        Delete Selected
+                    </button>
+                    <a href="import-students.html" class="import-btn">
+                        <i class="fas fa-file-import"></i>
+                        Import Students
+                    </a>
+                </div>
             </div>
             
             <div class="filter-container">
@@ -2212,13 +2434,16 @@
                 <table class="student-table">
                     <thead>
                         <tr>
+                            <th style="width: 50px;">
+                                <input type="checkbox" id="selectAllStudents" onchange="toggleSelectAll()" title="Select All">
+                            </th>
                             <th>Roll No</th>
                             <th>Name</th>
                             <th>Email</th>
                             <th>Phone</th>
                             <th>Department</th>
                             <th>Year</th>
-                            <th>Semester</th>
+
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -2287,7 +2512,7 @@
                     </div>
                     <div class="form-group">
                         <label for="editYear">Year</label>
-                        <select id="editYear" required onchange="updateEditClassOptions(); updateEditSemesterOptions()">
+                        <select id="editYear" required onchange="updateEditClassOptions()">
                             <option value="">Select Year</option>
                             <option value="FY">First Year (FY)</option>
                             <option value="SY">Second Year (SY)</option>
@@ -2295,12 +2520,7 @@
                             <option value="BE">Fourth Year (BE)</option>
                         </select>
                     </div>
-                    <div class="form-group" id="editSemesterGroup">
-                        <label for="editSemester">Semester</label>
-                        <select id="editSemester" required>
-                            <option value="">Select Semester</option>
-                        </select>
-                    </div>
+
                 </div>
 
                 <!-- Division Selection -->

@@ -1038,11 +1038,11 @@
                 </div>
                 <div class="form-group">
                     <label for="startDate">From Date</label>
-                    <input type="date" id="startDate">
+                    <input type="date" id="startDate" placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}">
                 </div>
                 <div class="form-group">
                     <label for="endDate">To Date</label>
-                    <input type="date" id="endDate">
+                    <input type="date" id="endDate" placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}">
                 </div>
                 <div class="form-group">
                     <label for="percentageFilter">Attendance Filter</label>
@@ -1384,6 +1384,64 @@
             console.log('About to call loadReports()...');
             loadReports();
             console.log('loadReports() called');
+        }
+
+        // Function to load teachers from Firebase and populate teacher filter dropdown
+        async function loadTeachersForFilter() {
+            console.log('🔍 Loading teachers for filter dropdown...');
+            
+            try {
+                // Check if Firebase is available
+                if (!window.db || typeof window.db.ref !== 'function') {
+                    console.warn('Firebase database not available for loading teachers');
+                    return;
+                }
+
+                // Load teachers from Firebase
+                const teachersSnapshot = await window.db.ref('teachers').once('value');
+                const teachersData = teachersSnapshot.val() || {};
+                
+                console.log('📚 Teachers data loaded:', Object.keys(teachersData).length, 'teachers');
+
+                // Get teacher filter dropdown
+                const teacherFilterSelect = document.getElementById('teacherFilter');
+                
+                // Clear existing options (keep "All Teachers")
+                teacherFilterSelect.innerHTML = '<option value="">All Teachers</option>';
+
+                // Create array of teachers with their info
+                const teachersList = [];
+                Object.entries(teachersData).forEach(([firebaseKey, teacher]) => {
+                    if (teacher && typeof teacher === 'object') {
+                        const teacherId = teacher.teacherId || teacher.code || firebaseKey;
+                        const firstName = teacher.firstName || '';
+                        const lastName = teacher.lastName || '';
+                        const fullName = `${firstName} ${lastName}`.trim() || teacher.name || teacherId;
+                        
+                        teachersList.push({
+                            id: teacherId,
+                            name: fullName,
+                            displayText: `${fullName} (${teacherId})`
+                        });
+                    }
+                });
+
+                // Sort teachers by name
+                teachersList.sort((a, b) => a.name.localeCompare(b.name));
+
+                // Add teachers to dropdown
+                teachersList.forEach(teacher => {
+                    const option = document.createElement('option');
+                    option.value = teacher.id;
+                    option.textContent = teacher.displayText;
+                    teacherFilterSelect.appendChild(option);
+                });
+
+                console.log('✅ Teacher filter dropdown populated with', teachersList.length, 'teachers');
+
+            } catch (error) {
+                console.error('❌ Error loading teachers for filter:', error);
+            }
         }
 
         // Function to ensure current user's teacher name is properly set
@@ -2328,6 +2386,7 @@ function updateTable(students) {
                 <td>${record.year || '-'}</td>
                 <td>${record.division || '-'}</td>
                 <td>${record.subject || '-'}</td>
+                <td class="text-primary" style="font-weight: bold;">${record.teacherName || '-'}</td>
                 <td class="${record.lectureType === 'practical' ? 'text-danger' : 'text-success'}">${record.lectureType || 'theory'}</td>
                 <td class="${record.lectureType === 'practical' ? 'text-info' : 'text-muted'}">${record.lectureType === 'practical' ? (record.batch || 'A') : '-'}</td>
                 <td>${record.date || '-'}</td>
@@ -2887,6 +2946,9 @@ async function processAttendanceData(attendanceData, studentsData, filters) {
                     // For theory lectures, we don't filter by batch (they don't have batches)
                 }
 
+                // Get teacher name from teacherNames mapping or teacherId
+                const teacherName = filters.teacherNames[record.teacherId] || record.teacherId || 'Unknown Teacher';
+
                 // Create detailed record for each student
                 detailedRecords.push({
                     id: `${recordKey}_${studentId}`,
@@ -2896,6 +2958,7 @@ async function processAttendanceData(attendanceData, studentsData, filters) {
                     year: finalYear,
                     division: finalDivision,
                     subject: record.subject,
+                    teacherName: teacherName,
                     lectureType: record.lectureType || 'theory',
                     batch: batchInfo,
                     date: record.date,
@@ -3189,6 +3252,7 @@ async function processAttendanceData(attendanceData, studentsData, filters) {
                 <th>Year</th>
                 <th>Division</th>
                 <th>Subject</th>
+                <th>Teacher Name</th>
                 <th>Lecture Type</th>
                 <th>Batch</th>
                 <th>Date Taken</th>
@@ -3208,6 +3272,7 @@ async function processAttendanceData(attendanceData, studentsData, filters) {
                         <th>Year</th>
                         <th>Division</th>
                         <th>Subject</th>
+                        <th>Teacher Name</th>
                         <th>Lecture Type</th>
                         <th>Batch</th>
                         <th>Date</th>
