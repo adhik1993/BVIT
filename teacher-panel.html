@@ -3411,7 +3411,7 @@
             } else if (selectedDepartment === 'CE' && selectedYear === 'SY') {
                 console.log('🚫 CE SY detected - Only showing Batch A and B (no Batch C)');
                 batchSelect.innerHTML += '<option value="BatchA">Batch A (2001-2022, 2027)</option>';
-                batchSelect.innerHTML += '<option value="BatchB">Batch B (2023-2026, 2028-2043)</option>';
+                batchSelect.innerHTML += '<option value="BatchB">Batch B (2023-2026, 2028 onwards)</option>';
             } else if (department === 'IT' && year === 'FY') {
                 console.log('🎯 IT FY detected - Custom batch ranges');
                 batchSelect.innerHTML += '<option value="BatchA">Batch A (1-20 students)</option>';
@@ -5039,9 +5039,9 @@
                     } else if (batchLetter === 'B') {
                         batchStudents = allStudents.filter(s => {
                             const r = toNum(s);
-                            return (r >= 2023 && r <= 2026) || (r >= 2028 && r <= 2043);
+                            return (r >= 2023 && r <= 2026) || (r >= 2028);
                         });
-                        console.log('🎯 CE SY Batch B: Rolls 2023-2026, 2028-2043 loaded (skip 2027)');
+                        console.log('🎯 CE SY Batch B: Rolls 2023-2026, 2028 onwards loaded (skip 2027)');
                     } else {
                         batchStudents = [];
                         console.log('🚫 CE SY: No Batch C available');
