@@ -3449,7 +3449,7 @@
                 console.log('🎯 AI FY detected - Custom batch ranges');
                 batchSelect.innerHTML += '<option value="BatchA">Batch A (1001-1022)</option>';
                 batchSelect.innerHTML += '<option value="BatchB">Batch B (1023-1044)</option>';
-                batchSelect.innerHTML += '<option value="BatchC">Batch C (1045-1063)</option>';
+                batchSelect.innerHTML += '<option value="BatchC">Batch C (1045 onwards)</option>';
             } else {
                 console.log('✅ Standard batches - Showing Batch A, B, and C');
                 // Show all batches for other departments/years
@@ -5125,7 +5125,7 @@
                         batchStudents = allStudents.slice(0, 23);
                     }
                 } else if (department === 'AI' && year === 'FY') {
-                    // 🎯 AI FY roll-based slicing: A = 1001-1022, B = 1023-1044, C = 1045-1063
+                    // 🎯 AI FY roll-based slicing: A = 1001-1022, B = 1023-1044, C = 1045 onwards
                     const toNum = (s) => parseInt(String((s.rollNo || '')).replace(/\D/g, '')) || 0;
                     if (batchLetter === 'A') {
                         batchStudents = allStudents.filter(s => {
@@ -5142,9 +5142,9 @@
                     } else if (batchLetter === 'C') {
                         batchStudents = allStudents.filter(s => {
                             const r = toNum(s);
-                            return r >= 1045 && r <= 1063;
+                            return r >= 1045;
                         });
-                        console.log('🎯 AI FY Batch C: Rolls 1045-1063 loaded');
+                        console.log('🎯 AI FY Batch C: Rolls 1045 onwards loaded');
                     } else {
                         batchStudents = [];
                         console.log('🚫 AI FY: Invalid batch selected');
