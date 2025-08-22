@@ -3412,6 +3412,11 @@
                 console.log('🚫 CE SY detected - Only showing Batch A and B (no Batch C)');
                 batchSelect.innerHTML += '<option value="BatchA">Batch A (2001-2022, 2027)</option>';
                 batchSelect.innerHTML += '<option value="BatchB">Batch B (2023-2026, 2028 onwards)</option>';
+            } else if (selectedDepartment === 'CE' && selectedYear === 'FY') {
+                console.log('🎯 CE FY detected - Custom batch ranges');
+                batchSelect.innerHTML += '<option value="BatchA">Batch A (1101-1120)</option>';
+                batchSelect.innerHTML += '<option value="BatchB">Batch B (1121-1140)</option>';
+                batchSelect.innerHTML += '<option value="BatchC">Batch C (1141 onwards)</option>';
             } else if (department === 'IT' && year === 'FY') {
                 console.log('🎯 IT FY detected - Custom batch ranges');
                 batchSelect.innerHTML += '<option value="BatchA">Batch A (1-20 students)</option>';
@@ -5184,6 +5189,31 @@
                     } else {
                         batchStudents = [];
                         console.log('ME FY: Invalid batch selected');
+                    }
+                } else if (department === 'CE' && year === 'FY') {
+                    // 🎯 CE FY roll-based slicing: A = 1101-1120, B = 1121-1140, C = 1141 onwards
+                    const toNum = (s) => parseInt(String((s.rollNo || '')).replace(/\D/g, '')) || 0;
+                    if (batchLetter === 'A') {
+                        batchStudents = allStudents.filter(s => {
+                            const r = toNum(s);
+                            return r >= 1101 && r <= 1120;
+                        });
+                        console.log('🎯 CE FY Batch A: Rolls 1101-1120 loaded');
+                    } else if (batchLetter === 'B') {
+                        batchStudents = allStudents.filter(s => {
+                            const r = toNum(s);
+                            return r >= 1121 && r <= 1140;
+                        });
+                        console.log('🎯 CE FY Batch B: Rolls 1121-1140 loaded');
+                    } else if (batchLetter === 'C') {
+                        batchStudents = allStudents.filter(s => {
+                            const r = toNum(s);
+                            return r >= 1141;
+                        });
+                        console.log('🎯 CE FY Batch C: Rolls 1141 onwards loaded');
+                    } else {
+                        batchStudents = [];
+                        console.log('🚫 CE FY: Invalid batch selected');
                     }
                 } else if (department === 'CE' && year === 'TY') {
                     // 🎯 CE TY Special handling: Only Batch A with roll 3001-3026
